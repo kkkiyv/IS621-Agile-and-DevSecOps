@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TEACHER
+  COUNSELLOR
+  LEAD_ADMIN
+}
+
+enum ReferralStatus {
+  SUBMITTED
+  IN_TRIAGE
+  CASE_OPENED
+  CLOSED
+}
+
+model User {
+  id             String     @id @default(cuid())
+  email          String     @unique
+  passwordHash   String
+  role           Role
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  referrals      Referral[] @relation("SubmittedReferrals")
+}
+
+model Referral {
+  id              String         @id @default(cuid())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  submittedById   String
+  submittedBy     User           @relation("SubmittedReferrals", fields: [submittedById], references: [id], onDelete: Cascade)
+  studentName     String
+  nric            String
+  description     String
+  category        String?
+  urgency         String?
+  status          ReferralStatus @default(SUBMITTED)
+  triageRiskLevel String?
+  triageOutcome   String?
+}
