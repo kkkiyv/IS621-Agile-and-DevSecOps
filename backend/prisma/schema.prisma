@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Referral {
+  id          String         @id @default(cuid())
+  studentName String
+  studentId   String
+  concern     String
+  description String
+  submittedBy String
+  status      ReferralStatus @default(PENDING)
+  riskLevel   RiskLevel?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+enum ReferralStatus {
+  PENDING
+  IN_REVIEW
+  CLOSED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
