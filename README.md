@@ -48,3 +48,33 @@ Do not commit real `.env` files to GitHub.
 ## Database
 
 The project uses PostgreSQL through Docker Compose.
+
+## Local Development Setup
+
+### Prerequisites
+- Docker Desktop installed and running
+- Node.js installed
+
+### Steps
+
+1. Copy the example env file and fill in your Clerk keys:
+   ```bash
+   cp .env.example backend/.env.local
+   ```
+
+2. Start the local Postgres container:
+   ```bash
+   docker compose up -d
+   ```
+
+3. Install dependencies and run migrations:
+   ```bash
+   cd backend && npm install && npm run prisma:migrate
+   ```
+
+4. Start the backend:
+   ```bash
+   cd backend && npm run dev
+   ```
+
+The backend will be running at `http://localhost:4000`

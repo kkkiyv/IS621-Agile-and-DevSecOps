@@ -8,7 +8,6 @@ app.use(express.json());
 app.use(clerkMiddleware());
 
 // Routes
-app.use("/api", require("./routes"));
 app.use("/api/referrals", require("./routes/referral"));
 app.use("/api/referrals", require("./routes/triage"));
 
