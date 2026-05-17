@@ -7,7 +7,12 @@
     "dev": "node src/index.js",
     "start": "node src/index.js",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate deploy",
+    "prisma:seed": "prisma db seed",
+    "db:setup": "prisma migrate deploy && prisma db seed"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@clerk/express": "^1.0.0",
@@ -16,6 +21,6 @@
     "express": "^4.18.0"
   },
   "devDependencies": {
-    "prisma": "^5.0.0"
+    "prisma": "^5.22.0"
   }
 }
