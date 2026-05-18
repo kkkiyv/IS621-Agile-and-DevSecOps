@@ -45,6 +45,17 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`CaseHub API listening on http://localhost:${port}`);
+});
+
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(
+      `Port ${port} is already in use. Stop the other Node process, then run npm run dev again.`
+    );
+    console.error("PowerShell: netstat -ano | findstr :4000  then  taskkill /PID <pid> /F");
+    process.exit(1);
+  }
+  throw err;
 });
