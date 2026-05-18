@@ -1,36 +1,67 @@
-/** CH-002: teacher-visible shape — never expose triage fields. */
+const STATUS_LABELS = {
+  SUBMITTED: "Submitted",
+  IN_REVIEW: "In Review",
+  CASE_OPENED: "Converted to Case",
+  CLOSED: "Closed",
+};
+
+const RISK_LABELS = {
+  LOW: "Low",
+  MEDIUM: "Medium",
+  HIGH: "High",
+};
+
 function toTeacherReferral(row) {
   return {
     id: row.id,
+    studentName: row.studentName,
+    concern: row.concern,
+    status: row.status,
+    statusLabel: STATUS_LABELS[row.status] || row.status,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    status: row.status,
-    studentName: row.studentName,
-    nric: row.nric,
-    description: row.description,
-    category: row.category,
-    urgency: row.urgency,
   };
 }
 
-/** CH-003: counsellor queue — operational view incl. triage. */
 function toCounsellorReferral(row) {
   return {
     id: row.id,
+    studentName: row.studentName,
+    concern: row.concern,
+    description: row.description,
+    status: row.status,
+    statusLabel: STATUS_LABELS[row.status] || row.status,
+    riskLevel: row.riskLevel,
+    riskLevelLabel: row.riskLevel ? RISK_LABELS[row.riskLevel] : null,
+    triageNotes: row.triageNotes,
+    triagedAt: row.triagedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    status: row.status,
-    studentName: row.studentName,
-    nric: row.nric,
-    description: row.description,
-    category: row.category,
-    urgency: row.urgency,
     submittedBy: row.submittedBy
-      ? { id: row.submittedBy.id, email: row.submittedBy.email }
+      ? {
+          id: row.submittedBy.id,
+          email: row.submittedBy.email,
+          name: row.submittedBy.name,
+        }
       : undefined,
-    triageRiskLevel: row.triageRiskLevel,
-    triageOutcome: row.triageOutcome,
+    triagedBy: row.triagedBy
+      ? {
+          id: row.triagedBy.id,
+          name: row.triagedBy.name,
+        }
+      : undefined,
   };
 }
 
-module.exports = { toTeacherReferral, toCounsellorReferral };
+const counsellorInclude = {
+  submittedBy: { select: { id: true, email: true, name: true } },
+  triagedBy: { select: { id: true, name: true } },
+};
+
+module.exports = {
+  toTeacherReferral,
+  toCounsellorReferral,
+  STATUS_LABELS,
+  RISK_LABELS,
+  counsellorInclude,
+};

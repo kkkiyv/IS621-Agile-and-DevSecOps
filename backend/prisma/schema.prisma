@@ -7,22 +7,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Referral {
-  id          String         @id @default(cuid())
-  studentName String
-  studentId   String
-  concern     String
-  description String
-  submittedBy String
-  status      ReferralStatus @default(PENDING)
-  riskLevel   RiskLevel?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+enum Role {
+  TEACHER
+  COUNSELLOR
+  LEAD_ADMIN
 }
 
 enum ReferralStatus {
-  PENDING
+  SUBMITTED
   IN_REVIEW
+  CASE_OPENED
   CLOSED
 }
 
@@ -30,4 +24,33 @@ enum RiskLevel {
   LOW
   MEDIUM
   HIGH
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  role         Role
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  referrals        Referral[] @relation("SubmittedReferrals")
+  triagedReferrals Referral[] @relation("TriagedReferrals")
+}
+
+model Referral {
+  id            String         @id @default(cuid())
+  studentName   String
+  concern       String
+  description   String
+  status        ReferralStatus @default(SUBMITTED)
+  riskLevel     RiskLevel?
+  triageNotes   String?
+  triagedById   String?
+  triagedAt     DateTime?
+  submittedById String
+  submittedBy   User           @relation("SubmittedReferrals", fields: [submittedById], references: [id], onDelete: Cascade)
+  triagedBy     User?          @relation("TriagedReferrals", fields: [triagedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }

@@ -17,7 +17,7 @@ async function authenticate(req, res, next) {
     const userId = decoded.sub;
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, role: true },
+      select: { id: true, email: true, name: true, role: true },
     });
     if (!user) {
       return res.status(401).json({ error: "User no longer exists" });

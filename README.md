@@ -1,74 +1,51 @@
-# CaseHub
+# CaseHub — Student Support Portal
 
-CaseHub is a full-stack project with a backend, frontend, Prisma database layer, and Docker-based local database setup.
+**Team onboarding & DevSecOps:** see [docs/HANDOFF.md](docs/HANDOFF.md).
 
-## Project Structure
+## Quick start
 
-```text
-casehub/
-├── backend/
-│   ├── src/
-│   ├── prisma/
-│   └── package.json
-├── frontend/
-│   └── src/
-├── .env.example
-├── docker-compose.yml
-└── README.md
+```bash
+# 1. Database
+docker compose up -d
+
+# 2. Backend
+cd backend
+copy .env.example .env
+npm install
+npx prisma migrate deploy
+npx prisma db seed
+npm run dev
+
+# 3. Frontend (new terminal)
+cd frontend
+npm install
+npm run dev
 ```
 
-## Backend
+Open http://localhost:5173 — pick a role (Demo JWT). Password for email login: `demo123!`.
 
-The backend code is located in:
+## Demo JWT login
 
-```text
-backend/src/
-```
+Role cards call `POST /api/auth/demo-login` with `{ "role": "TEACHER" | "COUNSELLOR" | "LEAD_ADMIN" }` and store the JWT in `sessionStorage`.
 
-Prisma files are located in:
+| Role card | Seed user |
+|-----------|-----------|
+| Teacher | teacher@casehub.demo (Sarah Johnson) |
+| Counsellor | counsellor@casehub.demo |
+| Lead | lead@casehub.demo |
 
-```text
-backend/prisma/
-```
+## API ↔ screens
 
-## Frontend
+| Screen | Story | Endpoint |
+|--------|-------|----------|
+| Role login | Demo auth | `POST /api/auth/demo-login` |
+| Submit Referral | CH-001 | `POST /api/referrals` |
+| My Referrals | CH-002 | `GET /api/referrals/me` |
+| Counsellor queue | CH-003 | `GET /api/referrals/queue?status=` |
+| Triage (API ready) | CH-004 | `PATCH /api/referrals/:id/triage` |
 
-The frontend code is located in:
+## Stack
 
-```text
-frontend/src/
-```
-
-## Environment Variables
-
-Use `.env.example` as a template for local environment variables.
-
-Do not commit real `.env` files to GitHub.
-
-## Database
-
-The project uses PostgreSQL through Docker Compose.
-
-## Backend API (CH-002, CH-003)
-
-Run Postgres (`docker compose up -d`), then from `backend/`:
-
-1. Copy `backend/.env.example` to `backend/.env` (or keep a repo-root `.env`; the server loads repo root then `backend/.env`).
-2. `npm install`
-3. `npx prisma migrate deploy`
-4. `npx prisma db seed`
-
-Start the API: `npm run dev` (default `PORT=4000`).
-
-Seed accounts (password `demo123!`): `teacher@casehub.demo`, `teacher2@casehub.demo`, `counsellor@casehub.demo`.
-
-**Auth**
-
-- `POST /api/auth/login` — `{ "email", "password" }` → `{ accessToken, user }`.
-
-**Stories**
-
-| Story | Role | Endpoint | Behaviour |
-|--------|------|-----------|-----------|
-| CH-002 | Teacher | `GET /api/referrals/me` + `Authorization: Bearer <JWT>` | Only referrals submitted by this user; **no** triage fields (`triageRiskLevel`, `triageOutcome`). |
-| CH-003 | Counsellor | `GET /api/referrals/queue?status=SUBMITTED` (status optional; allowed: `SUBMITTED`, `IN_TRIAGE`, `CASE_OPENED`, `CLOSED`) | All referrals, ordered by newest; includes submitter summary and triage fields. |
+- **Frontend:** React 18, TypeScript, Vite, React Router
+- **Backend:** Node.js, Express, JWT, Prisma
+- **DB:** PostgreSQL (Docker Compose)

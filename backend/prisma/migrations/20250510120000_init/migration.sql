@@ -2,13 +2,17 @@
 CREATE TYPE "Role" AS ENUM ('TEACHER', 'COUNSELLOR', 'LEAD_ADMIN');
 
 -- CreateEnum
-CREATE TYPE "ReferralStatus" AS ENUM ('SUBMITTED', 'IN_TRIAGE', 'CASE_OPENED', 'CLOSED');
+CREATE TYPE "ReferralStatus" AS ENUM ('SUBMITTED', 'IN_REVIEW', 'CLOSED');
+
+-- CreateEnum
+CREATE TYPE "RiskLevel" AS ENUM ('LOW', 'MEDIUM', 'HIGH');
 
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "passwordHash" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
     "role" "Role" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -19,17 +23,15 @@ CREATE TABLE "User" (
 -- CreateTable
 CREATE TABLE "Referral" (
     "id" TEXT NOT NULL,
+    "studentName" TEXT NOT NULL,
+    "concern" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "status" "ReferralStatus" NOT NULL DEFAULT 'SUBMITTED',
+    "riskLevel" "RiskLevel",
+    "triageNotes" TEXT,
+    "submittedById" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "submittedById" TEXT NOT NULL,
-    "studentName" TEXT NOT NULL,
-    "nric" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "category" TEXT,
-    "urgency" TEXT,
-    "status" "ReferralStatus" NOT NULL DEFAULT 'SUBMITTED',
-    "triageRiskLevel" TEXT,
-    "triageOutcome" TEXT,
 
     CONSTRAINT "Referral_pkey" PRIMARY KEY ("id")
 );
