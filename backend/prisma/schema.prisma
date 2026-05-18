@@ -7,27 +7,40 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime    @default(now())
+  referrals    Referral[]
+}
+
 model Referral {
-  id          String         @id @default(cuid())
-  studentName String
-  studentId   String
-  concern     String
-  description String
-  submittedBy String
-  status      ReferralStatus @default(PENDING)
-  riskLevel   RiskLevel?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id              String         @id @default(cuid())
+  studentName     String
+  nric            String
+  description     String
+  category        String
+  urgency         String
+  triageRiskLevel String?
+  triageOutcome   String?
+  submittedBy     User           @relation(fields: [submittedById], references: [id])
+  submittedById   String
+  status          ReferralStatus @default(SUBMITTED)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+enum Role {
+  TEACHER
+  COUNSELLOR
+  ADMIN
 }
 
 enum ReferralStatus {
-  PENDING
-  IN_REVIEW
+  SUBMITTED
+  IN_TRIAGE
+  CASE_CREATED
   CLOSED
-}
-
-enum RiskLevel {
-  LOW
-  MEDIUM
-  HIGH
 }

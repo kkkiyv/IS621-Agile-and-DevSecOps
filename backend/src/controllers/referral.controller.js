@@ -12,7 +12,7 @@ const createReferral = async (req, res) => {
         studentId,
         concern,
         description,
-        submittedBy: req.userId,
+        submittedBy: req.user.id,
         status: 'PENDING',
       },
     });
