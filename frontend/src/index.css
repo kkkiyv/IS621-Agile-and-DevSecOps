@@ -56,6 +56,26 @@ a {
   width: 100%;
 }
 
+.login-deploy-warning {
+  max-width: 420px;
+  width: 100%;
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+}
+
+.login-deploy-warning code {
+  font-size: 0.75rem;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
 .login-card {
   max-width: 420px;
   width: 100%;

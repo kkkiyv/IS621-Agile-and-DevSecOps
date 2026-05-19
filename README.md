@@ -24,6 +24,12 @@ npm run dev
 
 Open http://localhost:5173 — sign in with email/password or expand **Demo mode** for role cards. Seeded password: `demo123!`.
 
+## Public demo (GitHub Pages)
+
+Deploy instructions: **[docs/DEPLOY-GITHUB-PAGES.md](docs/DEPLOY-GITHUB-PAGES.md)**
+
+After setup, share: **https://kkkiyv.github.io/IS621-Agile-and-DevSecOps/**
+
 ## Sign in
 
 - **Email/password:** `POST /api/auth/login` — e.g. `teacher@casehub.demo` / `demo123!`

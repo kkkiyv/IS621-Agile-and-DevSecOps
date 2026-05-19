@@ -10,11 +10,26 @@ const referralsRoutes = require("./routes/referrals.routes");
 
 const app = express();
 const port = Number(process.env.PORT) || 4000;
-const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
+
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
+const allowedOrigins = (
+  process.env.FRONTEND_URL || "http://localhost:5173"
+)
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
-    origin: [frontend, "http://localhost:5173"],
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
   })
 );

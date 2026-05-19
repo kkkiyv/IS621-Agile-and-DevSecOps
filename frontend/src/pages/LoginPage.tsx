@@ -90,6 +90,8 @@ export function LoginPage() {
   };
 
   const busy = formLoading || demoLoading !== null;
+  const missingApiUrl =
+    import.meta.env.PROD && !import.meta.env.VITE_API_URL?.trim();
 
   return (
     <div className="login-page">
@@ -97,6 +99,14 @@ export function LoginPage() {
         <h1 className="login-title">Student Support Portal</h1>
         <p className="login-subtitle">Sign in to CaseHub with your email and password</p>
       </div>
+
+      {missingApiUrl && (
+        <p className="login-deploy-warning" role="alert">
+          This build has no API URL configured. Set GitHub secret{" "}
+          <code>VITE_API_URL</code> to your public backend, then redeploy. See{" "}
+          <code>docs/DEPLOY-GITHUB-PAGES.md</code>.
+        </p>
+      )}
 
       <form
         className="card login-card form-card"
