@@ -50,6 +50,126 @@ a {
   margin: 0 0 2.5rem;
 }
 
+.login-header {
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+}
+
+.login-card {
+  max-width: 420px;
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.login-hint {
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
+}
+
+.login-hint strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.login-accounts {
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.login-accounts summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.login-accounts-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.login-accounts-pick {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.login-accounts-pick:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: #eff6ff;
+}
+
+.login-accounts-role {
+  font-weight: 500;
+  font-size: 0.8125rem;
+}
+
+.login-accounts-email {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.login-form-actions {
+  margin-top: 0.25rem;
+}
+
+.login-submit {
+  width: 100%;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 420px;
+  width: 100%;
+  margin: 1.5rem 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.login-demo-toggle {
+  max-width: 420px;
+  width: 100%;
+}
+
+.login-demo-section {
+  width: 100%;
+  max-width: 900px;
+  margin-top: 1.5rem;
+}
+
+.login-subtitle--demo {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.role-grid--login {
+  margin: 0 auto;
+}
+
 .role-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(200px, 1fr));
@@ -536,7 +656,8 @@ a {
 }
 
 @media (max-width: 768px) {
-  .role-grid {
+  .role-grid,
+  .role-grid--login {
     grid-template-columns: 1fr;
   }
   .topbar-inner {

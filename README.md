@@ -22,11 +22,14 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 — pick a role (Demo JWT). Password for email login: `demo123!`.
+Open http://localhost:5173 — sign in with email/password or expand **Demo mode** for role cards. Seeded password: `demo123!`.
 
-## Demo JWT login
+## Sign in
 
-Role cards call `POST /api/auth/demo-login` with `{ "role": "TEACHER" | "COUNSELLOR" | "LEAD_ADMIN" }` and store the JWT in `sessionStorage`.
+- **Email/password:** `POST /api/auth/login` — e.g. `teacher@casehub.demo` / `demo123!`
+- **Demo mode (optional):** role cards call `POST /api/auth/demo-login` with `{ "role": "TEACHER" | "COUNSELLOR" | "LEAD_ADMIN" }`
+
+JWT is stored in `sessionStorage`. Auth routes are rate-limited (5 login attempts per 15 minutes per IP).
 
 | Role card | Seed user |
 |-----------|-----------|

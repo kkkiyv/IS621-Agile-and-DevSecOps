@@ -1,7 +1,17 @@
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
+export const STORAGE_TOKEN = "casehub_token";
+export const STORAGE_USER = "casehub_user";
+export const UNAUTHORIZED_EVENT = "casehub:unauthorized";
+
 function getToken(): string | null {
-  return sessionStorage.getItem("casehub_token");
+  return sessionStorage.getItem(STORAGE_TOKEN);
+}
+
+function clearSession(): void {
+  sessionStorage.removeItem(STORAGE_TOKEN);
+  sessionStorage.removeItem(STORAGE_USER);
+  window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT));
 }
 
 export async function apiFetch<T>(
@@ -19,6 +29,14 @@ export async function apiFetch<T>(
   }
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+  if (res.status === 401 && !path.startsWith("/api/auth/")) {
+    clearSession();
+    if (window.location.pathname !== "/") {
+      window.location.assign("/");
+    }
+    throw new Error("Your session has expired. Please sign in again.");
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

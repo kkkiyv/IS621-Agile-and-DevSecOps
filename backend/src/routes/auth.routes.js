@@ -2,6 +2,15 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const { prisma } = require("../prisma");
 const { signToken } = require("../utils/jwt");
+const { validate } = require("../middleware/validate");
+const {
+  authLoginLimiter,
+  authDemoLimiter,
+} = require("../middleware/authRateLimit");
+const {
+  loginValidation,
+  demoLoginValidation,
+} = require("../validators/auth.validator");
 
 const router = express.Router();
 
@@ -31,16 +40,13 @@ function issueSession(user, res) {
 }
 
 /** Demo role cards on login screen */
-router.post("/demo-login", async (req, res) => {
-  const role =
-    typeof req.body?.role === "string" ? req.body.role.trim().toUpperCase() : "";
-
-  if (!Object.keys(DEMO_USERS).includes(role)) {
-    return res.status(400).json({
-      error: "Invalid role",
-      allowed: Object.keys(DEMO_USERS),
-    });
-  }
+router.post(
+  "/demo-login",
+  authDemoLimiter,
+  demoLoginValidation,
+  validate,
+  async (req, res) => {
+  const role = req.body.role.trim().toUpperCase();
 
   try {
     const user = await prisma.user.findUnique({
@@ -59,19 +65,12 @@ router.post("/demo-login", async (req, res) => {
     console.error(e);
     return res.status(500).json({ error: "Demo login failed" });
   }
-});
-
-router.post("/login", async (req, res) => {
-  const email =
-    typeof req.body?.email === "string"
-      ? req.body.email.trim().toLowerCase()
-      : "";
-  const password =
-    typeof req.body?.password === "string" ? req.body.password : "";
-
-  if (!email || !password) {
-    return res.status(400).json({ error: "email and password are required" });
   }
+);
+
+router.post("/login", authLoginLimiter, loginValidation, validate, async (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
 
   try {
     const user = await prisma.user.findUnique({ where: { email } });
