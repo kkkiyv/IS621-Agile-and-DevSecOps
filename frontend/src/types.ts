@@ -48,6 +48,23 @@ export interface CounsellorReferral {
   triagedBy?: { id: string; name: string };
 }
 
+export type CaseStatus = "OPEN" | "IN_PROGRESS" | "CLOSED";
+
+export interface Case {
+  id: string;
+  status: CaseStatus;
+  createdAt: string;
+  updatedAt: string;
+  referral: {
+    id: string;
+    studentName: string;
+    concern: string;
+    riskLevel?: RiskLevel | null;
+    triageNotes?: string | null;
+  };
+  assignedTo: { id: string; name: string; email: string };
+}
+
 export interface QueueResponse {
   referrals: CounsellorReferral[];
   filter: { status: string } | null;

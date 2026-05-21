@@ -4,7 +4,17 @@ export const STORAGE_TOKEN = "casehub_token";
 export const STORAGE_USER = "casehub_user";
 export const UNAUTHORIZED_EVENT = "casehub:unauthorized";
 
-function getToken(): string | null {
+let _clerkGetToken: (() => Promise<string | null>) | null = null;
+
+export function setClerkTokenGetter(fn: () => Promise<string | null>) {
+  _clerkGetToken = fn;
+}
+
+async function resolveToken(): Promise<string | null> {
+  if (_clerkGetToken) {
+    const clerkToken = await _clerkGetToken();
+    if (clerkToken) return clerkToken;
+  }
   return sessionStorage.getItem(STORAGE_TOKEN);
 }
 
@@ -23,7 +33,7 @@ export async function apiFetch<T>(
     ...(options.headers as Record<string, string>),
   };
 
-  const token = getToken();
+  const token = await resolveToken();
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }

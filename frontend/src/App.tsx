@@ -6,6 +6,7 @@ import { MyReferralsPage } from "./pages/MyReferralsPage";
 import { CounsellorQueuePage } from "./pages/CounsellorQueuePage";
 import { ReferralDetailPage } from "./pages/ReferralDetailPage";
 import { LeadPlaceholderPage } from "./pages/LeadPlaceholderPage";
+import { CasesPage } from "./pages/CasesPage";
 import type { Role } from "./types";
 
 function RequireAuth({
@@ -15,7 +16,8 @@ function RequireAuth({
   children: React.ReactNode;
   roles?: Role[];
 }) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
+  if (loading) return null;
   if (!isAuthenticated) return <Navigate to="/" replace />;
   if (roles && user && !roles.includes(user.role)) {
     return <Navigate to="/" replace />;
@@ -56,6 +58,14 @@ export default function App() {
         element={
           <RequireAuth roles={["COUNSELLOR", "LEAD_ADMIN"]}>
             <ReferralDetailPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/counsellor/cases"
+        element={
+          <RequireAuth roles={["COUNSELLOR", "LEAD_ADMIN"]}>
+            <CasesPage />
           </RequireAuth>
         }
       />

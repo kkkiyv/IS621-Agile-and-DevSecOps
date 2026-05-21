@@ -26,16 +26,23 @@ enum RiskLevel {
   HIGH
 }
 
+enum CaseStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
 model User {
   id           String     @id @default(cuid())
+  clerkId      String?    @unique
   email        String     @unique
-  passwordHash String
   name         String
   role         Role
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   referrals        Referral[] @relation("SubmittedReferrals")
   triagedReferrals Referral[] @relation("TriagedReferrals")
+  assignedCases    Case[]
 }
 
 model Referral {
@@ -51,6 +58,18 @@ model Referral {
   submittedById String
   submittedBy   User           @relation("SubmittedReferrals", fields: [submittedById], references: [id], onDelete: Cascade)
   triagedBy     User?          @relation("TriagedReferrals", fields: [triagedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  Case          Case?
+}
+
+model Case {
+  id            String         @id @default(cuid())
+  referral      Referral       @relation(fields: [referralId], references: [id])
+  referralId    String         @unique
+  assignedTo    User           @relation(fields: [assignedToId], references: [id])
+  assignedToId  String
+  status        CaseStatus     @default(OPEN)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }

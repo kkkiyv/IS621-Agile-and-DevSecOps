@@ -59,7 +59,14 @@ export function Layout({
               >
                 Referral Queue
               </NavLink>
-              <span className="nav-tab nav-tab--disabled">Cases</span>
+              <NavLink
+                to="/counsellor/cases"
+                className={({ isActive }) =>
+                  `nav-tab${isActive ? " nav-tab--active" : ""}`
+                }
+              >
+                Cases
+              </NavLink>
             </nav>
           )}
           <div className="user-menu">
