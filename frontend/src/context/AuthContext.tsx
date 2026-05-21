@@ -7,8 +7,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useAuth as useClerkAuth, useClerk } from "@clerk/react";
 import {
   apiFetch,
+  setClerkTokenGetter,
   STORAGE_TOKEN,
   STORAGE_USER,
   UNAUTHORIZED_EVENT,
@@ -18,10 +20,10 @@ import type { AuthResponse, Role, User } from "../types";
 interface AuthContextValue {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<User>;
   loginDemo: (role: Role) => Promise<User>;
   logout: () => void;
   isAuthenticated: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -43,28 +45,40 @@ function persistSession(data: AuthResponse): User {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() =>
+  const { isLoaded, isSignedIn, getToken } = useClerkAuth();
+  const { signOut } = useClerk();
+
+  // Demo JWT state
+  const [demoToken, setDemoToken] = useState<string | null>(() =>
     sessionStorage.getItem(STORAGE_TOKEN)
   );
-  const [user, setUser] = useState<User | null>(() => loadUser());
+  const [demoUser, setDemoUser] = useState<User | null>(() => loadUser());
 
-  const applySession = useCallback((data: AuthResponse) => {
+  // Clerk-synced user state
+  const [clerkUser, setClerkUser] = useState<User | null>(null);
+
+  // Register Clerk token getter so apiFetch uses it automatically
+  useEffect(() => {
+    setClerkTokenGetter(getToken);
+  }, [getToken]);
+
+  // Sync Clerk user to backend whenever Clerk signs in
+  useEffect(() => {
+    if (!isSignedIn) {
+      setClerkUser(null);
+      return;
+    }
+    apiFetch<User>("/api/auth/sync", { method: "POST" })
+      .then(setClerkUser)
+      .catch(console.error);
+  }, [isSignedIn]);
+
+  const applyDemoSession = useCallback((data: AuthResponse) => {
     const nextUser = persistSession(data);
-    setToken(data.accessToken);
-    setUser(nextUser);
+    setDemoToken(data.accessToken);
+    setDemoUser(nextUser);
     return nextUser;
   }, []);
-
-  const login = useCallback(
-    async (email: string, password: string) => {
-      const data = await apiFetch<AuthResponse>("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
-      return applySession(data);
-    },
-    [applySession]
-  );
 
   const loginDemo = useCallback(
     async (role: Role) => {
@@ -72,37 +86,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
         body: JSON.stringify({ role }),
       });
-      return applySession(data);
+      return applyDemoSession(data);
     },
-    [applySession]
+    [applyDemoSession]
   );
 
   const logout = useCallback(() => {
     sessionStorage.removeItem(STORAGE_TOKEN);
     sessionStorage.removeItem(STORAGE_USER);
-    setToken(null);
-    setUser(null);
-  }, []);
+    setDemoToken(null);
+    setDemoUser(null);
+    setClerkUser(null);
+    if (isSignedIn) signOut();
+  }, [isSignedIn, signOut]);
 
   useEffect(() => {
     const onUnauthorized = () => {
-      setToken(null);
-      setUser(null);
+      setDemoToken(null);
+      setDemoUser(null);
     };
     window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
   }, []);
 
+  const user = clerkUser ?? demoUser;
+  const isAuthenticated = Boolean(clerkUser || (demoToken && demoUser));
+  // Show loading while Clerk initialises or while syncing a signed-in user
+  const loading = !isLoaded || Boolean(isSignedIn && !clerkUser && !demoUser);
+
   const value = useMemo(
     () => ({
       user,
-      token,
-      login,
+      token: demoToken,
       loginDemo,
       logout,
-      isAuthenticated: Boolean(token && user),
+      isAuthenticated,
+      loading,
     }),
-    [user, token, login, loginDemo, logout]
+    [user, demoToken, loginDemo, logout, isAuthenticated, loading]
   );
 
   return (

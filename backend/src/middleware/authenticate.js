@@ -1,32 +1,44 @@
-const { verifyToken } = require("../utils/jwt");
+const { getAuth } = require("@clerk/express");
 const { prisma } = require("../prisma");
+const { verifyToken } = require("../utils/jwt");
 
 async function authenticate(req, res, next) {
-  const header = req.headers.authorization;
-  const token =
-    typeof header === "string" && header.startsWith("Bearer ")
-      ? header.slice(7)
-      : null;
-
-  if (!token) {
-    return res.status(401).json({ error: "Missing bearer token" });
-  }
+  const { userId } = getAuth(req);
 
   try {
-    const decoded = verifyToken(token);
-    const userId = decoded.sub;
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, email: true, name: true, role: true },
-    });
-    if (!user) {
-      return res.status(401).json({ error: "User no longer exists" });
+    if (userId) {
+      const user = await prisma.user.findUnique({
+        where: { clerkId: userId },
+        select: { id: true, email: true, name: true, role: true },
+      });
+      if (!user) {
+        return res.status(401).json({ error: "User not found in system" });
+      }
+      req.user = user;
+      return next();
     }
-    req.user = user;
-    return next();
+
+    // fallback: demo JWT
+    const header = req.headers.authorization;
+    const token = header?.startsWith("Bearer ") && header.slice(7);
+    if (token) {
+      const payload = verifyToken(token);
+      const user = await prisma.user.findUnique({
+        where: { id: payload.sub },
+        select: { id: true, email: true, name: true, role: true },
+      });
+      if (!user) {
+        return res.status(401).json({ error: "User not found in system" });
+      }
+      req.user = user;
+      return next();
+    }
+
+    return res.status(401).json({ error: "Unauthorized" });
   } catch {
-    return res.status(401).json({ error: "Invalid or expired token" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
+
 
 module.exports = { authenticate };

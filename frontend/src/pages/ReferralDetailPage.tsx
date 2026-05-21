@@ -37,6 +37,28 @@ export function ReferralDetailPage() {
   }, [id]);
 
   const canTriage = referral?.status === "SUBMITTED";
+  const canOpenCase = referral?.status === "IN_REVIEW";
+
+  const handleOpenCase = async () => {
+    if (!id) return;
+    setError(null);
+    setSuccess(null);
+    setSaving(true);
+    try {
+      await apiFetch("/api/cases", {
+        method: "POST",
+        body: JSON.stringify({ referralId: id }),
+      });
+      setSuccess("Case opened successfully.");
+      setReferral((prev) =>
+        prev ? { ...prev, status: "CASE_OPENED", statusLabel: "Converted to Case" } : prev
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to open case");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleTriage = async (e: FormEvent) => {
     e.preventDefault();
@@ -167,10 +189,26 @@ export function ReferralDetailPage() {
                   <strong>Triage Notes:</strong> {referral.triageNotes}
                 </div>
               )}
-              <p className="muted">
-                This referral is already in review or closed. Further case
-                management will be available in a later sprint.
-              </p>
+              {error && <p className="form-error">{error}</p>}
+              {success && <p className="form-success">{success}</p>}
+              {canOpenCase ? (
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={saving}
+                    onClick={handleOpenCase}
+                  >
+                    {saving ? "Opening…" : "Open Case"}
+                  </button>
+                </div>
+              ) : (
+                <p className="muted">
+                  {referral.status === "CASE_OPENED"
+                    ? "A case has been opened for this referral."
+                    : "This referral is closed."}
+                </p>
+              )}
             </div>
           )}
         </>

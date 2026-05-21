@@ -1,50 +1,44 @@
 const { PrismaClient, Role, ReferralStatus, RiskLevel } = require("@prisma/client");
-const bcrypt = require("bcryptjs");
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const passwordHash = await bcrypt.hash("demo123!", 10);
 
   const teacher = await prisma.user.upsert({
-    where: { email: "teacher@casehub.demo" },
+    where: { email: "ghimchong96+teacher@gmail.com" },
     update: { name: "Sarah Johnson" },
     create: {
-      email: "teacher@casehub.demo",
-      passwordHash,
+      email: "ghimchong96+teacher@gmail.com",
       name: "Sarah Johnson",
       role: Role.TEACHER,
     },
   });
 
   await prisma.user.upsert({
-    where: { email: "teacher2@casehub.demo" },
+    where: { email: "ghimchong96+teacher2@gmail.com" },
     update: {},
     create: {
-      email: "teacher2@casehub.demo",
-      passwordHash,
+      email: "ghimchong96+teacher2@gmail.com",
       name: "Alex Chen",
       role: Role.TEACHER,
     },
   });
 
   const counsellor = await prisma.user.upsert({
-    where: { email: "counsellor@casehub.demo" },
+    where: { email: "ghimchong96+counsellor@gmail.com" },
     update: { name: "Michael Chen" },
     create: {
-      email: "counsellor@casehub.demo",
-      passwordHash,
+      email: "ghimchong96+counsellor@gmail.com",
       name: "Michael Chen",
       role: Role.COUNSELLOR,
     },
   });
 
   await prisma.user.upsert({
-    where: { email: "lead@casehub.demo" },
+    where: { email: "ghimchong96+lead@gmail.com" },
     update: { name: "Jordan Park" },
     create: {
-      email: "lead@casehub.demo",
-      passwordHash,
+      email: "ghimchong96+lead@gmail.com",
       name: "Jordan Park",
       role: Role.LEAD_ADMIN,
     },
@@ -85,10 +79,10 @@ async function main() {
     });
   }
 
-  console.log("Seed complete (password: demo123!):", {
+  console.log("Seed complete (password: 12345678):", {
     teacher: teacher.email,
     counsellor: counsellor.email,
-    lead: "lead@casehub.demo",
+    lead: "ghimchong96+lead@gmail.com",
   });
 }
 
