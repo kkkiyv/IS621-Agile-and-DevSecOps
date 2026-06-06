@@ -18,6 +18,7 @@ export function ReferralDetailPage() {
   const [referral, setReferral] = useState<CounsellorReferral | null>(null);
   const [riskLevel, setRiskLevel] = useState<RiskLevel>("MEDIUM");
   const [triageNotes, setTriageNotes] = useState("");
+  const [outcome, setOutcome] = useState<"OPEN_CASE" | "CLOSE" | "">("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +63,7 @@ export function ReferralDetailPage() {
 
   const handleTriage = async (e: FormEvent) => {
     e.preventDefault();
-    if (!id || !canTriage) return;
+    if (!id || !canTriage || !outcome) return;
     setError(null);
     setSuccess(null);
     setSaving(true);
@@ -71,11 +72,17 @@ export function ReferralDetailPage() {
         `/api/referrals/${id}/triage`,
         {
           method: "PATCH",
-          body: JSON.stringify({ riskLevel, triageNotes: triageNotes.trim() }),
+          body: JSON.stringify({ riskLevel, triageNotes: triageNotes.trim(), outcome }),
         }
       );
+      if (outcome === "OPEN_CASE") {
+        await apiFetch("/api/cases", {
+          method: "POST",
+          body: JSON.stringify({ referralId: id }),
+        });
+      }
       setReferral(data.referral);
-      setSuccess("Referral triaged successfully.");
+      setSuccess("Triage complete.");
       setTimeout(() => navigate("/counsellor/queue"), 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Triage failed");
@@ -94,9 +101,9 @@ export function ReferralDetailPage() {
       {error && !referral && <p className="form-error">{error}</p>}
 
       {referral && (
-        <>
+        <div className="case-detail-cards">
           <div className="card detail-header">
-            <div className="detail-title-row">
+            <div className="referral-card-title" style={{ marginBottom: "0rem" }}>
               <h1>{referral.studentName}</h1>
               <span className={statusBadgeClass(referral.status)}>
                 {referral.statusLabel}
@@ -107,92 +114,106 @@ export function ReferralDetailPage() {
                 </span>
               )}
             </div>
-            <dl className="referral-meta">
+            <p style={{ margin: "0 0 1rem", color: "var(--muted)", fontSize: "0.8rem" }}>
+              Referral ID: {referral.id}
+            </p>
+            <dl className="referral-meta referral-meta--2col">
               <div>
-                <dt>Concern</dt>
+                <dt>Concern Category</dt>
                 <dd>{referral.concern}</dd>
               </div>
               <div>
-                <dt>Submitted by</dt>
+                <dt>Submitted By</dt>
                 <dd>{referral.submittedBy?.name ?? "—"}</dd>
               </div>
               <div>
                 <dt>Submitted</dt>
                 <dd>{formatRelativeTime(referral.createdAt)}</dd>
               </div>
+              <div>
+                <dt>Last Updated</dt>
+                <dd>{formatRelativeTime(referral.updatedAt)}</dd>
+              </div>
             </dl>
-            <p className="referral-description">{referral.description}</p>
-            {referral.triagedBy && referral.triagedAt && (
-              <p className="triage-meta muted">
-                Triaged by {referral.triagedBy.name}{" "}
-                {formatRelativeTime(referral.triagedAt)}
-              </p>
-            )}
+            <hr className="referral-divider" />
+            <div className="referral-description-section">
+              <dt>Description</dt>
+              <dd>{referral.description}</dd>
+            </div>
           </div>
 
           {canTriage ? (
             <form className="card form-card" onSubmit={handleTriage}>
-              <h2>Triage referral</h2>
-              <p className="page-subtitle">
-                Assign risk level and notes before moving to in review.
-              </p>
+              <h3>Triage Referral</h3>
               {error && <p className="form-error">{error}</p>}
               {success && <p className="form-success">{success}</p>}
 
+              <div className="field">
+                <span>
+                  Risk Level <span className="required">*</span>
+                </span>
+                <div className="risk-toggle-group">
+                  {(["LOW", "MEDIUM", "HIGH"] as RiskLevel[]).map((level) => (
+                    <button
+                      key={level}
+                      type="button"
+                      className={`risk-toggle-btn${riskLevel === level ? " risk-toggle-btn--active" : ""}`}
+                      onClick={() => setRiskLevel(level)}
+                    >
+                      {level.charAt(0) + level.slice(1).toLowerCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <label className="field">
                 <span>
-                  Risk level <span className="required">*</span>
+                  Outcome <span className="required">*</span>
                 </span>
                 <select
-                  value={riskLevel}
-                  onChange={(e) => setRiskLevel(e.target.value as RiskLevel)}
+                  value={outcome}
+                  onChange={(e) => setOutcome(e.target.value as "OPEN_CASE" | "CLOSE")}
                   required
                 >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
+                  <option value="" disabled>Select outcome</option>
+                  <option value="OPEN_CASE">Open Case</option>
+                  <option value="CLOSE">Close</option>
                 </select>
               </label>
 
               <label className="field">
-                <span>Triage notes</span>
+                <span>
+                  Triage Notes <span className="required">*</span>
+                </span>
                 <textarea
                   rows={4}
-                  maxLength={200}
-                  placeholder="e.g. Will create case and monitor academic progress closely."
+                  maxLength={2000}
+                  placeholder="Document your assessment, planned interventions, and rationale for the outcome..."
                   value={triageNotes}
                   onChange={(e) => setTriageNotes(e.target.value)}
+                  required
                 />
-                <span className="field-hint">
-                  {triageNotes.length}/200 characters (text only)
-                </span>
+                <span className="field-hint">{triageNotes.length} characters</span>
               </label>
 
               <div className="form-actions">
+                <button type="submit" className="btn btn-primary" disabled={saving || !outcome}>
+                  {saving ? "Saving…" : "Complete Triage"}
+                </button>
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="btn btn-ghost"
                   onClick={() => navigate("/counsellor/queue")}
                 >
                   Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? "Saving…" : "Save triage"}
                 </button>
               </div>
             </form>
           ) : (
             <div className="card form-card">
-              <h2>Triage complete</h2>
-              {referral.triageNotes && (
-                <div className="triage-notes-box">
-                  <strong>Triage Notes:</strong> {referral.triageNotes}
-                </div>
-              )}
-              {error && <p className="form-error">{error}</p>}
-              {success && <p className="form-success">{success}</p>}
-              {canOpenCase ? (
-                <div className="form-actions">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ margin: 0 }}>Triage complete</h3>
+                {canOpenCase && (
                   <button
                     type="button"
                     className="btn btn-primary"
@@ -201,17 +222,37 @@ export function ReferralDetailPage() {
                   >
                     {saving ? "Opening…" : "Open Case"}
                   </button>
-                </div>
-              ) : (
-                <p className="muted">
-                  {referral.status === "CASE_OPENED"
-                    ? "A case has been opened for this referral."
-                    : "This referral is closed."}
-                </p>
+                )}
+                {!canOpenCase && referral.caseId && (
+                  <Link to={`/counsellor/cases/${referral.caseId}`} className="btn btn-primary btn-sm">
+                    View Case
+                  </Link>
+                )}
+              </div>
+              {error && <p className="form-error">{error}</p>}
+              {success && <p className="form-success">{success}</p>}
+              {!canOpenCase && (
+                <>
+                  <hr className="referral-divider" />
+                  {referral.triageNotes && (
+                    <>
+                      <dl className="referral-description-section referral-description-section--card">
+                        <dt>Triage Notes:</dt>
+                        <dd>{referral.triageNotes}</dd>
+                      </dl>
+                      <hr className="referral-divider" />
+                    </>
+                  )}
+                  <p className="muted" style={{ margin: 0, padding: 0 }}>
+                    {referral.status === "CASE_OPENED"
+                      ? "A case has been opened for this referral."
+                      : "This referral is closed."}
+                  </p>
+                </>
               )}
             </div>
           )}
-        </>
+        </div>
       )}
     </Layout>
   );

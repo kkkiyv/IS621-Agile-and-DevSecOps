@@ -7,6 +7,7 @@ import { CounsellorQueuePage } from "./pages/CounsellorQueuePage";
 import { ReferralDetailPage } from "./pages/ReferralDetailPage";
 import { LeadPlaceholderPage } from "./pages/LeadPlaceholderPage";
 import { CasesPage } from "./pages/CasesPage";
+import { CaseDetailPage } from "./pages/CaseDetailPage";
 import type { Role } from "./types";
 
 function RequireAuth({
@@ -66,6 +67,14 @@ export default function App() {
         element={
           <RequireAuth roles={["COUNSELLOR", "LEAD_ADMIN"]}>
             <CasesPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/counsellor/cases/:id"
+        element={
+          <RequireAuth roles={["COUNSELLOR", "LEAD_ADMIN"]}>
+            <CaseDetailPage />
           </RequireAuth>
         }
       />

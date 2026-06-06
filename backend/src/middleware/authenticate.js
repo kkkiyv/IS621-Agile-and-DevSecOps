@@ -35,7 +35,10 @@ async function authenticate(req, res, next) {
     }
 
     return res.status(401).json({ error: "Unauthorized" });
-  } catch {
+  } catch (err) {
+    if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
     return res.status(500).json({ error: "Internal server error" });
   }
 }

@@ -108,18 +108,55 @@ export function CounsellorQueuePage() {
       <div className="referral-list">
         {referrals.map((r) => (
           <article key={r.id} className="referral-card card">
-            <div className="referral-card-header">
-              <div className="referral-card-title">
-                <h2>{r.studentName}</h2>
-                <span className={statusBadgeClass(r.status)}>
-                  {r.statusLabel}
-                </span>
-                {r.riskLevelLabel && (
-                  <span className={riskBadgeClass(r.riskLevel)}>
-                    {r.riskLevelLabel}
+            <div className="referral-card-inner">
+              <div className="referral-card-main">
+                <div className="referral-card-title">
+                  <h2>{r.studentName}</h2>
+                  <span className={statusBadgeClass(r.status)}>
+                    {r.statusLabel}
                   </span>
+                  {r.riskLevelLabel && (
+                    <span className={riskBadgeClass(r.riskLevel)}>
+                      {r.riskLevelLabel}
+                    </span>
+                  )}
+                </div>
+
+                <dl className="referral-meta referral-meta--list">
+                  <div><dt>Concern:</dt><dd>{r.concern}</dd></div>
+                  <div><dt>Submitted by:</dt><dd>{r.submittedBy?.name ?? "—"}</dd></div>
+                  <div><dt>Submitted:</dt><dd>{formatRelativeTime(r.createdAt)}</dd></div>
+                </dl>
+
+                <hr className="referral-divider" />
+
+                <dl className="referral-description-section referral-description-section--card">
+                  <dt>Description:</dt>
+                  <dd>{r.description}</dd>
+                </dl>
+
+                {r.triageNotes && (
+                  <>
+                    <hr className="referral-divider" />
+                    <dl className="referral-description-section referral-description-section--card">
+                      <dt>Triage Notes:</dt>
+                      <dd>{r.triageNotes}</dd>
+                    </dl>
+                  </>
+                )}
+                {r.triagedBy && r.triagedAt && (
+                  <>
+                    <hr className="referral-divider" />
+                    <dl className="referral-meta referral-meta--list">
+                      <div>
+                        <dt>Triaged by:</dt>
+                        <dd>{r.triagedBy.name} · {formatRelativeTime(r.triagedAt)}</dd>
+                      </div>
+                    </dl>
+                  </>
                 )}
               </div>
+
               <Link
                 to={`/counsellor/referrals/${r.id}`}
                 className="btn btn-primary btn-sm"
@@ -127,36 +164,6 @@ export function CounsellorQueuePage() {
                 View Details
               </Link>
             </div>
-
-            <dl className="referral-meta">
-              <div>
-                <dt>Concern</dt>
-                <dd>{r.concern}</dd>
-              </div>
-              <div>
-                <dt>Submitted by</dt>
-                <dd>{r.submittedBy?.name ?? "—"}</dd>
-              </div>
-              <div>
-                <dt>Submitted</dt>
-                <dd>{formatRelativeTime(r.createdAt)}</dd>
-              </div>
-            </dl>
-
-            <p className="referral-description">{r.description}</p>
-
-            {r.triageNotes && (
-              <div className="triage-notes-box">
-                <strong>Triage Notes:</strong> {r.triageNotes}
-              </div>
-            )}
-
-            {r.triagedBy && r.triagedAt && (
-              <p className="triage-meta muted">
-                Triaged by {r.triagedBy.name}{" "}
-                {formatRelativeTime(r.triagedAt)}
-              </p>
-            )}
           </article>
         ))}
       </div>
