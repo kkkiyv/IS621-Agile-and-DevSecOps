@@ -46,9 +46,27 @@ export interface CounsellorReferral {
   updatedAt: string;
   submittedBy?: { id: string; email: string; name: string };
   triagedBy?: { id: string; name: string };
+  caseId?: string | null;
 }
 
 export type CaseStatus = "OPEN" | "IN_PROGRESS" | "CLOSED";
+
+export type SessionType = "INDIVIDUAL" | "GROUP" | "FAMILY" | "CRISIS";
+
+export interface SessionNote {
+  id: string;
+  caseId: string;
+  sessionType: SessionType;
+  sessionTypeLabel: string;
+  duration: number;
+  sessionDate: string;
+  summary: string;
+  observations: string;
+  nextSteps: string;
+  author: { id: string; name: string };
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Case {
   id: string;
@@ -63,6 +81,27 @@ export interface Case {
     triageNotes?: string | null;
   };
   assignedTo: { id: string; name: string; email: string };
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string | null;
+  completed: boolean;
+  dueDate: string;
+  caseId: string;
+  assignedToId: string;
+  assignedTo?: { id: string; name: string };
+  createdAt: string;
+}
+
+export interface Note {
+  id: string;
+  content: string;
+  caseId: string;
+  authorId: string;
+  author: { id: string; name: string };
+  createdAt: string;
 }
 
 export interface QueueResponse {

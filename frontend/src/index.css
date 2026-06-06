@@ -403,7 +403,7 @@ a {
   border: none;
   border-radius: 8px;
   padding: 0.6rem 1.1rem;
-  font: inherit;
+  font: 0.6rem;
   font-weight: 500;
   cursor: pointer;
 }
@@ -418,9 +418,13 @@ a {
 }
 
 .btn-secondary {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
+  background: #4b5563;
+  color: #fff;
+  border: none;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #374151;
 }
 
 .btn-ghost {
@@ -501,6 +505,70 @@ a {
   color: #1e40af;
 }
 
+/* Session Notes */
+.session-notes-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.25rem;
+  font-size: 1.75rem;
+}
+
+.session-note-card {
+  padding: 1.25rem 1.5rem;
+}
+
+.session-note-header {
+  margin-bottom: 0;
+}
+
+.session-note-type {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.session-note-duration {
+  background: #f3f4f6;
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.session-note-date {
+  margin: 0.2rem 0 0;
+  font-size: 0.875rem;
+  color: var(--text);
+}
+
+.session-note-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.session-note-field-label {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+
+.session-note-field-value {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  background: var(--surface);
+}
+
+.session-note-meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding: 0;
+}
+
 .filter-select {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -557,7 +625,18 @@ a {
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 2rem;
+}
+
+.referral-card-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.referral-card-main {
+  flex: 1;
+  min-width: 0;
 }
 
 .referral-card-title {
@@ -567,9 +646,13 @@ a {
   gap: 0.5rem;
 }
 
+.referral-card-title h1 {
+  margin: 0;
+}
+
 .referral-card-title h2 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
 }
 
 .referral-meta {
@@ -593,6 +676,98 @@ a {
 .referral-description {
   margin: 0 0 0.75rem;
   color: #374151;
+}
+
+.referral-meta--2col {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.referral-meta--list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0.4rem 0 0;
+}
+
+.referral-meta--list > div {
+  display: flex;
+  gap: 0.35rem;
+  align-items: baseline;
+}
+
+.referral-meta--list dt {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.referral-meta--list dd {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.risk-toggle-group {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.risk-toggle-btn {
+  flex: 1;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.risk-toggle-btn:hover:not(.risk-toggle-btn--active) {
+  border-color: var(--primary);
+}
+
+.risk-toggle-btn--active {
+  border-color: var(--primary);
+  background: #eff6ff;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.referral-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1rem 0;
+}
+
+.referral-description-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.referral-description-section dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.referral-description-section dd {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.referral-description-section--card dt {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.referral-description-section--card dd {
+  font-size: 0.875rem;
+  margin-top: 0.15rem;
 }
 
 .triage-notes-box {
@@ -635,6 +810,26 @@ a {
   white-space: nowrap;
 }
 
+.case-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.status-select {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.status-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .empty-state {
   padding: 2rem;
   text-align: center;
@@ -652,17 +847,27 @@ a {
   text-decoration: underline;
 }
 
+.case-detail-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.case-detail-cards .form-card {
+  max-width: none;
+}
+
 .detail-header {
-  padding: 1.5rem;
-  margin-bottom: 1.25rem;
+  padding: 1rem 1.5rem;
 }
 
 .detail-title-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
 }
 
 .detail-title-row h1 {
@@ -673,6 +878,177 @@ a {
   color: #15803d;
   font-size: 0.875rem;
   margin: 0 0 1rem;
+}
+
+.case-tasks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.case-tasks-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* Tasks */
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0.75rem 0.75rem 1rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  gap: 1rem;
+}
+
+.task-item--overdue {
+  background: #fff1f2;
+  border-color: #fca5a5;
+}
+
+.task-item-main {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.task-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.btn-success {
+  background: #32CD32;
+  color: #fff;
+  border-radius: 1px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.65rem;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.task-icon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #9ca3af;
+}
+
+.task-icon--done {
+  color: #16a34a;
+}
+
+.task-icon--overdue {
+  color: #f59e0b;
+}
+
+.task-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.task-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-description {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.task-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.task-overdue-label {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.task-done-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #16a34a;
+  white-space: nowrap;
+}
+
+.task-due {
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  margin-left: 0.5rem;
+}
+
+.task-form {
+  margin-top: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.task-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.task-form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.form-input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  width: 100%;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.task-form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.task-add-btn {
+  margin-top: 0.75rem;
+  align-self: flex-start;
 }
 
 @media (max-width: 768px) {
@@ -686,4 +1062,50 @@ a {
   .referral-meta {
     grid-template-columns: 1fr;
   }
+}
+
+/* Notes */
+.note-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.note-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: var(--bg);
+}
+
+.note-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.note-author {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.note-date {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.note-content {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text);
+  white-space: pre-wrap;
 }

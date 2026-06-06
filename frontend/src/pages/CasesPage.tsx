@@ -74,12 +74,20 @@ export function CasesPage() {
                   </span>
                 )}
               </div>
-              <Link
-                to={`/counsellor/referrals/${c.referral.id}`}
-                className="btn btn-primary btn-sm"
-              >
-                View Referral
-              </Link>
+              <div className="case-card-actions">
+                <Link
+                  to={`/counsellor/referrals/${c.referral.id}`}
+                  className="btn btn-secondary btn-sm"
+                >
+                  View Referral
+                </Link>
+                <Link
+                  to={`/counsellor/cases/${c.id}`}
+                  className="btn btn-primary btn-sm"
+                >
+                  View Case
+                </Link>
+              </div>
             </div>
 
             <dl className="referral-meta">

@@ -79,20 +79,25 @@ const getReferralById = async (req, res) => {
 
 const triageReferral = async (req, res) => {
   const { id } = req.params;
-  const { riskLevel, triageNotes } = req.body;
+  const { riskLevel, triageNotes, outcome } = req.body;
 
   const existing = await prisma.referral.findUnique({ where: { id } });
   if (!existing) return res.status(404).json({ error: "Referral not found" });
   if (existing.status === ReferralStatus.CLOSED) {
     return res.status(400).json({ error: "Cannot triage a closed referral" });
   }
+  if (riskLevel === "HIGH" && (!triageNotes || triageNotes.trim().length === 0)) {
+    return res.status(400).json({ error: "A justification note is required for High risk referrals" });
+  }
+
+  const newStatus = outcome === "CLOSE" ? ReferralStatus.CLOSED : ReferralStatus.IN_REVIEW;
 
   const referral = await prisma.referral.update({
     where: { id },
     data: {
       riskLevel,
       triageNotes: triageNotes?.trim() || null,
-      status: ReferralStatus.IN_REVIEW,
+      status: newStatus,
       triagedById: req.user.id,
       triagedAt: new Date(),
     },
@@ -105,4 +110,31 @@ const triageReferral = async (req, res) => {
   });
 };
 
-module.exports = { createReferral, getMyReferrals, getReferralQueue, getReferralById, triageReferral };
+const updateCaseStatus = async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const existing = await prisma.case.findUnique({ where: { id } });
+  if (!existing) return res.status(404).json({ error: "Case not found" });
+
+  const VALID_STATUSES = new Set(Object.values(CaseStatus));
+  if (!VALID_STATUSES.has(status)) {
+    return res.status(400).json({ error: "Invalid status value" });
+  }
+
+  if (existing.status === CaseStatus.CLOSED) {
+    return res.status(400).json({ error: "Cannot update a closed case" });
+  }
+
+  const updatedCase = await prisma.case.update({
+    where: { id },
+    data: { status },
+  });
+
+  return res.json({
+    message: "Case updated successfully",
+    case: updatedCase,
+  });
+};
+
+module.exports = { createReferral, getMyReferrals, getReferralQueue, getReferralById, triageReferral, updateCaseStatus };

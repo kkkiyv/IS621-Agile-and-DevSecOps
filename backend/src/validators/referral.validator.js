@@ -28,8 +28,12 @@ const triageReferralValidator = [
   body("triageNotes")
     .optional()
     .trim()
-    .isLength({ max: 200 })
-    .withMessage("Triage notes must be at most 200 characters"),
+    .isLength({ max: 2000 })
+    .withMessage("Triage notes must be at most 2000 characters"),
+  body("outcome")
+    .optional()
+    .isIn(["OPEN_CASE", "CLOSE"])
+    .withMessage("Outcome must be OPEN_CASE or CLOSE"),
 ];
 
 module.exports = { createReferralValidator, triageReferralValidator };

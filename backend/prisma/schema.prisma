@@ -32,6 +32,13 @@ enum CaseStatus {
   CLOSED
 }
 
+enum SessionType {
+  INDIVIDUAL
+  GROUP
+  FAMILY
+  CRISIS
+}
+
 model User {
   id           String     @id @default(cuid())
   clerkId      String?    @unique
@@ -43,6 +50,9 @@ model User {
   referrals        Referral[] @relation("SubmittedReferrals")
   triagedReferrals Referral[] @relation("TriagedReferrals")
   assignedCases    Case[]
+  assignedTasks    Task[]
+  notes            Note[]
+  sessionNotes     SessionNote[]
 }
 
 model Referral {
@@ -70,6 +80,50 @@ model Case {
   assignedTo    User           @relation(fields: [assignedToId], references: [id])
   assignedToId  String
   status        CaseStatus     @default(OPEN)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  tasks         Task[]
+  notes         Note[]
+  sessionNotes  SessionNote[]
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  content   String
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id])
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SessionNote {
+  id           String      @id @default(cuid())
+  case         Case        @relation(fields: [caseId], references: [id])
+  caseId       String
+  sessionType  SessionType
+  duration     Int
+  sessionDate  DateTime
+  summary      String
+  observations String
+  nextSteps    String
+  author       User        @relation(fields: [authorId], references: [id])
+  authorId     String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Task {
+  id            String         @id @default(cuid())
+  title         String
+  description   String?
+  completed     Boolean        @default(false)
+  dueDate       DateTime
+  assignedToId  String
+  assignedTo    User           @relation(fields: [assignedToId], references: [id])
+  caseId        String
+  case          Case           @relation(fields: [caseId], references: [id])
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }

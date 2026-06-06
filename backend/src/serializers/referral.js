@@ -50,12 +50,14 @@ function toCounsellorReferral(row) {
           name: row.triagedBy.name,
         }
       : undefined,
+    caseId: row.Case?.id ?? null,
   };
 }
 
 const counsellorInclude = {
   submittedBy: { select: { id: true, email: true, name: true } },
   triagedBy: { select: { id: true, name: true } },
+  Case: { select: { id: true } },
 };
 
 module.exports = {

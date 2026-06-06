@@ -2,82 +2,234 @@ const { ReferralStatus, CaseStatus } = require("@prisma/client");
 const { prisma } = require("../prisma");
 
 const openCase = async (req, res) => {
-  const { referralId } = req.body;
+  try {
+    const { referralId } = req.body;
 
-  const referral = await prisma.referral.findUnique({
-    where: { id: referralId },
-    include: { Case: true },
-  });
-
-  if (!referral) {
-    return res.status(404).json({ error: "Referral not found" });
-  }
-  if (referral.status === ReferralStatus.CLOSED) {
-    return res.status(400).json({ error: "Cannot open a case for a closed referral" });
-  }
-  if (referral.Case) {
-    return res.status(409).json({ error: "A case already exists for this referral" });
-  }
-
-  const [, newCase] = await prisma.$transaction([
-    prisma.referral.update({
+    const referral = await prisma.referral.findUnique({
       where: { id: referralId },
-      data: { status: ReferralStatus.CASE_OPENED },
-    }),
-    prisma.case.create({
-      data: {
-        referralId,
-        assignedToId: req.user.id,
-        status: CaseStatus.OPEN,
+      include: { Case: true },
+    });
+
+    if (!referral) {
+      return res.status(404).json({ error: "Referral not found" });
+    }
+    if (referral.status === ReferralStatus.CLOSED) {
+      return res.status(400).json({ error: "Cannot open a case for a closed referral" });
+    }
+    if (referral.Case) {
+      return res.status(409).json({ error: "A case already exists for this referral" });
+    }
+
+    const [, newCase] = await prisma.$transaction([
+      prisma.referral.update({
+        where: { id: referralId },
+        data: { status: ReferralStatus.CASE_OPENED },
+      }),
+      prisma.case.create({
+        data: {
+          referralId,
+          assignedToId: req.user.id,
+          status: CaseStatus.OPEN,
+        },
+        include: {
+          referral: {
+            select: { id: true, studentName: true, concern: true, riskLevel: true },
+          },
+          assignedTo: { select: { id: true, name: true, email: true } },
+        },
+      }),
+    ]);
+
+    return res.status(201).json({
+      message: "Case opened successfully",
+      case: {
+        id: newCase.id,
+        status: newCase.status,
+        createdAt: newCase.createdAt,
+        referral: newCase.referral,
+        assignedTo: newCase.assignedTo,
       },
+    });
+  } catch (err) {
+    console.error("openCase error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const getCases = async (req, res) => {
+  try {
+    const cases = await prisma.case.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        referral: {
+          select: {
+            id: true,
+            studentName: true,
+            concern: true,
+            riskLevel: true,
+            triageNotes: true,
+          },
+        },
+        assignedTo: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    return res.json({
+      cases: cases.map((c) => ({
+        id: c.id,
+        status: c.status,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        referral: c.referral,
+        assignedTo: c.assignedTo,
+      })),
+    });
+  } catch (err) {
+    console.error("getCases error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const getCase = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const c = await prisma.case.findUnique({
+      where: { id },
+      include: {
+        referral: {
+          select: { id: true, studentName: true, concern: true, riskLevel: true, triageNotes: true },
+        },
+        assignedTo: { select: { id: true, name: true, email: true } },
+        tasks: {
+          orderBy: { dueDate: "asc" },
+          include: { assignedTo: { select: { id: true, name: true } } },
+        },
+        notes: {
+          orderBy: { createdAt: "desc" },
+          include: { author: { select: { id: true, name: true } } },
+        },
+      },
+    });
+    if (!c) return res.status(404).json({ error: "Case not found" });
+    return res.json({ case: c });
+  } catch (err) {
+    console.error("getCase error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const VALID_STATUSES = Object.values(CaseStatus);
+
+const updateCaseStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({
+        error: `Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}`,
+      });
+    }
+
+    const existing = await prisma.case.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: "Case not found" });
+    }
+
+    const updated = await prisma.case.update({
+      where: { id },
+      data: { status },
       include: {
         referral: {
           select: { id: true, studentName: true, concern: true, riskLevel: true },
         },
         assignedTo: { select: { id: true, name: true, email: true } },
       },
-    }),
-  ]);
+    });
 
-  return res.status(201).json({
-    message: "Case opened successfully",
-    case: {
-      id: newCase.id,
-      status: newCase.status,
-      createdAt: newCase.createdAt,
-      referral: newCase.referral,
-      assignedTo: newCase.assignedTo,
-    },
-  });
-};
-
-const getCases = async (req, res) => {
-  const cases = await prisma.case.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      referral: {
-        select: {
-          id: true,
-          studentName: true,
-          concern: true,
-          riskLevel: true,
-          triageNotes: true,
-        },
+    return res.json({
+      message: "Case status updated",
+      case: {
+        id: updated.id,
+        status: updated.status,
+        updatedAt: updated.updatedAt,
+        referral: updated.referral,
+        assignedTo: updated.assignedTo,
       },
-      assignedTo: { select: { id: true, name: true, email: true } },
-    },
-  });
-
-  return res.json({
-    cases: cases.map((c) => ({
-      id: c.id,
-      status: c.status,
-      createdAt: c.createdAt,
-      updatedAt: c.updatedAt,
-      referral: c.referral,
-      assignedTo: c.assignedTo,
-    })),
-  });
+    });
+  } catch (err) {
+    console.error("updateCaseStatus error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 };
 
-module.exports = { openCase, getCases };
+const createTask = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, dueDate, assignedToId } = req.body;
+
+    const existing = await prisma.case.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: "Case not found" });
+
+    if (existing.status === CaseStatus.CLOSED) {
+      return res.status(400).json({ error: "Cannot create tasks for a closed case" });
+    }
+
+    const task = await prisma.task.create({
+      data: {
+        title,
+        description: description ?? null,
+        dueDate: new Date(dueDate),
+        assignedToId,
+        caseId: id,
+      },
+    });
+
+    return res.status(201).json({
+      message: "Task created successfully",
+      task,
+    });
+  } catch (err) {
+    console.error("createTask error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const markTaskComplete = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const task = await prisma.task.findUnique({ where: { id: taskId } });
+    if (!task) return res.status(404).json({ error: "Task not found" });
+    const updated = await prisma.task.update({
+      where: { id: taskId },
+      data: { completed: true },
+      include: { assignedTo: { select: { id: true, name: true } } },
+    });
+    return res.json({ task: updated });
+  } catch (err) {
+    console.error("markTaskComplete error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const createNote = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+
+    const existing = await prisma.case.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: "Case not found" });
+
+    const note = await prisma.note.create({
+      data: { content, caseId: id, authorId: req.user.id },
+      include: { author: { select: { id: true, name: true } } },
+    });
+
+    return res.status(201).json({ note });
+  } catch (err) {
+    console.error("createNote error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+module.exports = { openCase, getCases, getCase, updateCaseStatus, createTask, markTaskComplete, createNote };
