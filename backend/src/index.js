@@ -70,6 +70,12 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
+      if (
+        process.env.RENDER === "true" &&
+        /^https:\/\/[\w-]+\.onrender\.com$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
       return callback(null, false);
     },
     credentials: true,
@@ -79,6 +85,17 @@ app.use(
 app.use(express.json());
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "casehub-api" });
+});
+
+app.get("/api/health/db", async (_req, res) => {
+  try {
+    const { prisma } = require("./prisma");
+    const users = await prisma.user.count();
+    res.json({ ok: true, users });
+  } catch (err) {
+    console.error("DB health check failed:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
 });
 app.use(clerkMiddleware());
 app.use("/api/auth", authRoutes);
