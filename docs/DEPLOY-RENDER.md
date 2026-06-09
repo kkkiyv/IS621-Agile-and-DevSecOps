@@ -82,11 +82,11 @@ For **each** service below, open **Environment** in the Render dashboard.
 |----------|--------|
 | `VITE_CLERK_PUBLISHABLE_KEY` | From Clerk dashboard (publishable key) |
 
-`VITE_API_URL` is wired automatically from the matching API service.
+Set `VITE_API_URL` to the **public** API URL (e.g. `https://casehub-api.onrender.com`). Do **not** use Blueprint `fromService: property: host` — that is the private network hostname (`casehub-api`), which breaks browser requests.
 
 ### Fix CORS after first deploy (both APIs)
 
-`FRONTEND_URL` is auto-linked to the static site hostname. After deploy, verify each API has:
+Set `FRONTEND_URL` on each API to the **public** static site URL. Verify each API has:
 
 ```
 FRONTEND_URL=https://casehub-web-staging.onrender.com,http://localhost:5173
@@ -180,6 +180,7 @@ Frontend uses **HashRouter** (`/#/…`) — no SPA rewrite rules needed on Rende
 | Blueprint: `no such plan free for service type web` on static sites | Remove `plan: free` from `runtime: static` services — static sites are free by default and do not accept a plan field. |
 | Blueprint fails: 2nd Postgres | Free tier = 1 DB. Use one Postgres; point staging API to a `casehub_staging` database via manual `DATABASE_URL`, or upgrade plan. |
 | CORS error in browser | Set `FRONTEND_URL` on API to full static site URL + localhost |
+| Demo login: **Failed to fetch** | `VITE_API_URL` must be full public URL (`https://casehub-api.onrender.com`), not internal host (`casehub-api`). Update env var → **Manual Deploy** static site (clear build cache). |
 | Login / API network error | Check `VITE_API_URL` on static site; redeploy frontend |
 | API 500 / schema errors | API Shell: `npx prisma migrate deploy` then `npx prisma db seed` |
 | Blank website | Check static site build logs; ensure `npm run build` succeeds |

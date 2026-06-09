@@ -40,10 +40,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: casehub-web-staging
-          property: host
+        value: https://casehub-web-staging.onrender.com,http://localhost:5173
       - key: CLERK_SECRET_KEY
         sync: false
 
@@ -57,10 +54,7 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: casehub-api-staging
-          property: host
+        value: https://casehub-api-staging.onrender.com
       - key: VITE_CLERK_PUBLISHABLE_KEY
         sync: false
 
@@ -86,10 +80,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: casehub-web
-          property: host
+        value: https://casehub-web.onrender.com,http://localhost:5173
       - key: CLERK_SECRET_KEY
         sync: false
 
@@ -103,9 +94,6 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: casehub-api
-          property: host
+        value: https://casehub-api.onrender.com
       - key: VITE_CLERK_PUBLISHABLE_KEY
         sync: false
