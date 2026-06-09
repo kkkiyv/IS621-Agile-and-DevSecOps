@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { apiFetch } from "../api/client";
+import { useNow } from "../hooks/useNow";
 import type { Case, RiskLevel } from "../types";
 import { formatRelativeTime } from "../utils/format";
 
@@ -29,17 +30,42 @@ const RISK_LABELS: Record<string, string> = {
   HIGH: "High",
 };
 
+function sortCasesByOverdue(cases: Case[]): Case[] {
+  return [...cases].sort((a, b) => {
+    const aCount = a.overdueTaskCount ?? 0;
+    const bCount = b.overdueTaskCount ?? 0;
+    if (aCount !== bCount) return bCount - aCount;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+
 export function CasesPage() {
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const now = useNow();
 
   useEffect(() => {
+    let cancelled = false;
     apiFetch<{ cases: Case[] }>("/api/cases")
-      .then((data) => setCases(data.cases))
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
-      .finally(() => setLoading(false));
-  }, []);
+      .then((data) => {
+        if (!cancelled) setCases(sortCasesByOverdue(data.cases));
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [now]);
+
+  const totalOverdue = cases.reduce(
+    (sum, c) => sum + (c.overdueTaskCount ?? 0),
+    0
+  );
 
   return (
     <Layout counsellorNav>
@@ -47,6 +73,13 @@ export function CasesPage() {
         <div>
           <h1>Cases</h1>
           <p className="page-subtitle">All open and active student cases</p>
+          {totalOverdue > 0 && (
+            <p className="cases-overdue-summary" role="status">
+              <span className="badge badge--overdue">
+                {totalOverdue} overdue task{totalOverdue === 1 ? "" : "s"} need follow-up
+              </span>
+            </p>
+          )}
         </div>
       </div>
 
@@ -61,7 +94,10 @@ export function CasesPage() {
 
       <div className="referral-list">
         {cases.map((c) => (
-          <article key={c.id} className="referral-card card">
+          <article
+            key={c.id}
+            className={`referral-card card${(c.overdueTaskCount ?? 0) > 0 ? " case-card--overdue" : ""}`}
+          >
             <div className="referral-card-header">
               <div className="referral-card-title">
                 <h2>{c.referral.studentName}</h2>
@@ -71,6 +107,11 @@ export function CasesPage() {
                 {c.referral.riskLevel && (
                   <span className={riskBadgeClass(c.referral.riskLevel)}>
                     {RISK_LABELS[c.referral.riskLevel]}
+                  </span>
+                )}
+                {(c.overdueTaskCount ?? 0) > 0 && (
+                  <span className="badge badge--overdue" role="status">
+                    {c.overdueTaskCount} overdue
                   </span>
                 )}
               </div>

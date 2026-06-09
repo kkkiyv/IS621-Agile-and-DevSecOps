@@ -1,4 +1,13 @@
-const API_BASE = import.meta.env.VITE_API_URL ?? "";
+function normalizeApiBase(raw: string | undefined): string {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed.replace(/\/$/, "");
+  }
+  return `https://${trimmed.replace(/\/$/, "")}`;
+}
+
+const API_BASE = normalizeApiBase(import.meta.env.VITE_API_URL);
 
 export const STORAGE_TOKEN = "casehub_token";
 export const STORAGE_USER = "casehub_user";
@@ -11,11 +20,14 @@ export function setClerkTokenGetter(fn: () => Promise<string | null>) {
 }
 
 async function resolveToken(): Promise<string | null> {
+  const demoToken = sessionStorage.getItem(STORAGE_TOKEN);
+  if (demoToken) return demoToken;
+
   if (_clerkGetToken) {
     const clerkToken = await _clerkGetToken();
     if (clerkToken) return clerkToken;
   }
-  return sessionStorage.getItem(STORAGE_TOKEN);
+  return null;
 }
 
 function clearSession(): void {

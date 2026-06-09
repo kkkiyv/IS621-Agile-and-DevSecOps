@@ -24,6 +24,15 @@ npm run dev
 
 Open http://localhost:5173 — sign in with email/password or expand **Demo mode** for role cards. Seeded password: `demo123!`.
 
+**After `git pull`:** if a teammate changed the database schema, sync your local DB before restarting the API:
+
+```bash
+cd backend
+npm run db:sync
+```
+
+Stop the backend first if `prisma generate` fails with a file lock on Windows.
+
 ## Public demo (GitHub Pages)
 
 Deploy instructions: **[docs/DEPLOY-GITHUB-PAGES.md](docs/DEPLOY-GITHUB-PAGES.md)**

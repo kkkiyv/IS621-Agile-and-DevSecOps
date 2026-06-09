@@ -1,6 +1,10 @@
 const path = require("path");
 
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+require("dotenv").config({
+  path: path.resolve(__dirname, "../.env.local"),
+  override: true,
+});
 require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 
 const express = require("express");
@@ -9,19 +13,28 @@ const cors = require("cors");
 const authRoutes = require("./routes/auth.routes");
 const referralsRoutes = require("./routes/referrals.routes");
 const casesRoutes = require("./routes/cases.routes");
+const auditRoutes = require("./routes/audit.routes");
+const dashboardRoutes = require("./routes/dashboard.routes");
 
 const app = express();
 const port = Number(process.env.PORT) || 4000;
 
-if (process.env.NODE_ENV === "production") {
+if (process.env.RENDER || process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 
-const allowedOrigins = (
-  process.env.FRONTEND_URL || "http://localhost:5173"
-)
+function normalizeOrigin(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+}
+
+const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
   .split(",")
-  .map((s) => s.trim())
+  .map(normalizeOrigin)
   .filter(Boolean);
 
 app.use(
@@ -44,6 +57,8 @@ app.use(clerkMiddleware());
 app.use("/api/auth", authRoutes);
 app.use("/api/referrals", referralsRoutes);
 app.use("/api/cases", casesRoutes);
+app.use("/api/audit-logs", auditRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });

@@ -6,6 +6,7 @@ import { MyReferralsPage } from "./pages/MyReferralsPage";
 import { CounsellorQueuePage } from "./pages/CounsellorQueuePage";
 import { ReferralDetailPage } from "./pages/ReferralDetailPage";
 import { LeadPlaceholderPage } from "./pages/LeadPlaceholderPage";
+import { AuditLogsPage } from "./pages/AuditLogsPage";
 import { CasesPage } from "./pages/CasesPage";
 import { CaseDetailPage } from "./pages/CaseDetailPage";
 import type { Role } from "./types";
@@ -83,6 +84,14 @@ export default function App() {
         element={
           <RequireAuth roles={["LEAD_ADMIN"]}>
             <LeadPlaceholderPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/lead/audit-logs"
+        element={
+          <RequireAuth roles={["LEAD_ADMIN"]}>
+            <AuditLogsPage />
           </RequireAuth>
         }
       />

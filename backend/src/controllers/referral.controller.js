@@ -1,5 +1,6 @@
 const { ReferralStatus } = require("@prisma/client");
 const { prisma } = require("../prisma");
+const { recordAuditLog } = require("../services/audit.service");
 const {
   toTeacherReferral,
   toCounsellorReferral,
@@ -19,6 +20,15 @@ const createReferral = async (req, res) => {
       status: ReferralStatus.SUBMITTED,
     },
   });
+
+  await recordAuditLog({
+    userId: req.user.id,
+    action: "REFERRAL_CREATED",
+    details: `Referral created for ${studentName} - ${concern}`,
+    recordId: referral.id,
+    recordType: "referral",
+  });
+
   return res.status(201).json({
     message: "Referral submitted successfully",
     referral: toTeacherReferral(referral),
@@ -102,6 +112,15 @@ const triageReferral = async (req, res) => {
       triagedAt: new Date(),
     },
     include: counsellorInclude,
+  });
+
+  const outcomeLabel = outcome === "CLOSE" ? "close" : outcome === "MONITOR" ? "monitor" : "create_case";
+  await recordAuditLog({
+    userId: req.user.id,
+    action: "REFERRAL_TRIAGED",
+    details: `Referral triaged - Risk: ${riskLevel.toLowerCase()}, Outcome: ${outcomeLabel}`,
+    recordId: referral.id,
+    recordType: "referral",
   });
 
   return res.json({

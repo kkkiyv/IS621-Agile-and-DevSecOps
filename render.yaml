@@ -1,18 +1,29 @@
-# Optional: deploy backend + Postgres on Render (free tier).
-# After deploy, open Render Shell in the web service and run: npx prisma db seed
-# Then set GitHub repo secret VITE_API_URL to the Render service URL.
+# CaseHub — full stack on Render (staging + production)
+# Staging:  branch `staging`  → *-staging services
+# Production: branch `main`    → production services
+#
+# After first deploy, open each API Shell and run: npx prisma db seed
+# Set CLERK_SECRET_KEY on both API services in the Render dashboard.
+# Set VITE_CLERK_PUBLISHABLE_KEY on both static sites in the Render dashboard.
 
 databases:
+  - name: casehub-db-staging
+    plan: free
+    databaseName: casehub_staging
+    user: casehub
+
   - name: casehub-db
     plan: free
     databaseName: casehub
     user: casehub
 
 services:
+  # ── STAGING API ──────────────────────────────────────────
   - type: web
-    name: casehub-api
+    name: casehub-api-staging
     runtime: node
     plan: free
+    branch: staging
     rootDir: backend
     buildCommand: npm install && npx prisma generate && npx prisma migrate deploy
     startCommand: node src/index.js
@@ -20,6 +31,55 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
+      - key: NODE_ENV
+        value: staging
+      - key: DATABASE_URL
+        fromDatabase:
+          name: casehub-db-staging
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: casehub-web-staging
+          property: host
+      - key: CLERK_SECRET_KEY
+        sync: false
+
+  # ── STAGING FRONTEND ─────────────────────────────────────
+  - type: web
+    name: casehub-web-staging
+    runtime: static
+    plan: free
+    branch: staging
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: casehub-api-staging
+          property: host
+      - key: VITE_CLERK_PUBLISHABLE_KEY
+        sync: false
+
+  # ── PRODUCTION API ───────────────────────────────────────
+  - type: web
+    name: casehub-api
+    runtime: node
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npx prisma migrate deploy
+    startCommand: node src/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
       - key: DATABASE_URL
         fromDatabase:
           name: casehub-db
@@ -27,4 +87,27 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://kkkiyv.github.io,http://localhost:5173
+        fromService:
+          type: web
+          name: casehub-web
+          property: host
+      - key: CLERK_SECRET_KEY
+        sync: false
+
+  # ── PRODUCTION FRONTEND ──────────────────────────────────
+  - type: web
+    name: casehub-web
+    runtime: static
+    plan: free
+    branch: main
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: casehub-api
+          property: host
+      - key: VITE_CLERK_PUBLISHABLE_KEY
+        sync: false

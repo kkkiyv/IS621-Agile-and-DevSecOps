@@ -1,4 +1,5 @@
 const { prisma } = require("../prisma");
+const { recordAuditLog } = require("../services/audit.service");
 
 const SESSION_TYPE_LABELS = {
   INDIVIDUAL: "Individual Session",
@@ -48,6 +49,14 @@ const createSessionNote = async (req, res) => {
       authorId: req.user.id,
     },
     include: authorInclude,
+  });
+
+  await recordAuditLog({
+    userId: req.user.id,
+    action: "SESSION_NOTE_CREATED",
+    details: `Session note created (${SESSION_TYPE_LABELS[sessionType] || sessionType})`,
+    recordId: note.id,
+    recordType: "session",
   });
 
   return res.status(201).json({ sessionNote: toSessionNote(note) });

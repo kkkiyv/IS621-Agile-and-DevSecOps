@@ -11,13 +11,16 @@ export function Layout({
   children,
   teacherNav = false,
   counsellorNav = false,
+  leadNav = false,
 }: {
   children: React.ReactNode;
   teacherNav?: boolean;
   counsellorNav?: boolean;
+  leadNav?: boolean;
 }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const showLeadNav = leadNav || user?.role === "LEAD_ADMIN";
 
   const handleLogout = () => {
     logout();
@@ -51,6 +54,16 @@ export function Layout({
           )}
           {counsellorNav && (
             <nav className="nav-tabs">
+              {showLeadNav && (
+                <NavLink
+                  to="/lead"
+                  className={({ isActive }) =>
+                    `nav-tab${isActive ? " nav-tab--active" : ""}`
+                  }
+                >
+                  Dashboard
+                </NavLink>
+              )}
               <NavLink
                 to="/counsellor/queue"
                 className={({ isActive }) =>
@@ -67,6 +80,16 @@ export function Layout({
               >
                 Cases
               </NavLink>
+              {showLeadNav && (
+                <NavLink
+                  to="/lead/audit-logs"
+                  className={({ isActive }) =>
+                    `nav-tab${isActive ? " nav-tab--active" : ""}`
+                  }
+                >
+                  Audit Logs
+                </NavLink>
+              )}
             </nav>
           )}
           <div className="user-menu">

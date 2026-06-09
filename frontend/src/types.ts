@@ -81,6 +81,7 @@ export interface Case {
     triageNotes?: string | null;
   };
   assignedTo: { id: string; name: string; email: string };
+  overdueTaskCount?: number;
 }
 
 export interface Task {
@@ -93,6 +94,7 @@ export interface Task {
   assignedToId: string;
   assignedTo?: { id: string; name: string };
   createdAt: string;
+  isOverdue?: boolean;
 }
 
 export interface Note {
@@ -108,4 +110,61 @@ export interface QueueResponse {
   referrals: CounsellorReferral[];
   filter: { status: string } | null;
   statusCounts: Record<string, number>;
+}
+
+export type AuditAction =
+  | "REFERRAL_CREATED"
+  | "REFERRAL_TRIAGED"
+  | "CASE_CREATED"
+  | "NOTE_CREATED"
+  | "TASK_CREATED"
+  | "SESSION_NOTE_CREATED";
+
+export interface DashboardMetrics {
+  totalReferrals: number;
+  activeCases: number;
+  overdueTasks: number;
+  openTasks: number;
+}
+
+export interface DashboardOverdueTask {
+  id: string;
+  title: string;
+  studentName: string;
+  assignedToName: string;
+  caseId: string;
+}
+
+export interface DashboardRiskCase {
+  id: string;
+  studentName: string;
+  assignedToName: string;
+  riskLevel: RiskLevel;
+  openTaskCount: number;
+}
+
+export interface DashboardSummary {
+  metrics: DashboardMetrics;
+  referralsByRisk: Record<RiskLevel, number>;
+  casesByStatus: Record<CaseStatus, number>;
+  overdueTasks: DashboardOverdueTask[];
+  riskCases: DashboardRiskCase[];
+  generatedAt: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  action: AuditAction;
+  actionLabel: string;
+  timestamp: string;
+  user: {
+    id: string;
+    name: string;
+    role: Role;
+    label: string;
+  };
+  details: string;
+  recordId: string;
+  recordType: string;
+  displayRecordId: string;
 }

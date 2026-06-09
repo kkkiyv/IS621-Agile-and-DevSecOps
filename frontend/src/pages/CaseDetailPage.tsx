@@ -3,8 +3,10 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { apiFetch } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { useNow } from "../hooks/useNow";
 import type { Case, CaseStatus, Note, SessionNote, SessionType, Task } from "../types";
 import { formatRelativeTime } from "../utils/format";
+import { isTaskOverdue, sortTasksForDisplay } from "../utils/taskOverdue";
 
 const STATUS_LABELS: Record<string, string> = {
   OPEN: "Open",
@@ -58,6 +60,7 @@ export function CaseDetailPage() {
   const [sessionNextSteps, setSessionNextSteps] = useState("");
   const [sessionSubmitting, setSessionSubmitting] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const now = useNow();
 
   useEffect(() => {
     if (!id) return;
@@ -109,7 +112,14 @@ export function CaseDetailPage() {
     try {
       await apiFetch(`/api/cases/${id}/tasks/${taskId}/complete`, { method: "PATCH" });
       setCaseData((prev) =>
-        prev ? { ...prev, tasks: prev.tasks.map((t) => t.id === taskId ? { ...t, completed: true } : t) } : prev
+        prev
+          ? {
+              ...prev,
+              tasks: prev.tasks.map((t) =>
+                t.id === taskId ? { ...t, completed: true, isOverdue: false } : t
+              ),
+            }
+          : prev
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update task");
@@ -195,7 +205,8 @@ export function CaseDetailPage() {
   if (!caseData) return null;
 
   const isClosed = caseData.status === "CLOSED";
-  const now = new Date();
+  const sortedTasks = sortTasksForDisplay(caseData.tasks, now);
+  const overdueCount = sortedTasks.filter((t) => isTaskOverdue(t, now)).length;
 
   return (
     <Layout counsellorNav>
@@ -238,7 +249,14 @@ export function CaseDetailPage() {
 
         <div className="card" style={{ padding: "1.5rem" }}>
         <div className="case-tasks-header">
-          <h3>Tasks</h3>
+          <div className="case-tasks-title">
+            <h3>Tasks</h3>
+            {overdueCount > 0 && (
+              <span className="badge badge--overdue" role="status">
+                {overdueCount} overdue
+              </span>
+            )}
+          </div>
           {!isClosed && !formOpen && (
             <button type="button" className="btn btn-primary btn-sm" onClick={openForm}>
               + Add Task
@@ -306,27 +324,36 @@ export function CaseDetailPage() {
           {caseData.tasks.length === 0 && !formOpen && (
             <p className="muted" style={{ margin: 0, padding: 0 }}>No tasks yet.</p>
           )}
-          {caseData.tasks.map((t) => {
+          {sortedTasks.map((t) => {
             const due = new Date(t.dueDate);
-            const isOverdue = !t.completed && due < now;
+            const overdue = isTaskOverdue(t, now);
             return (
-              <div key={t.id} className={`task-item${isOverdue ? " task-item--overdue" : ""}`}>
+              <div
+                key={t.id}
+                className={`task-item${overdue ? " task-item--overdue" : ""}`}
+                aria-label={overdue ? `${t.title}, overdue` : t.title}
+              >
                 <div className="task-item-main">
-                  <span className={`task-icon${t.completed ? " task-icon--done" : isOverdue ? " task-icon--overdue" : ""}`}>
+                  <span className={`task-icon${t.completed ? " task-icon--done" : overdue ? " task-icon--overdue" : ""}`}>
                     {t.completed ? (
                       <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd"/></svg>
-                    ) : isOverdue ? (
+                    ) : overdue ? (
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     ) : (
                       <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd"/></svg>
                     )}
                   </span>
                   <div className="task-item-body">
-                    <span className="task-title">{t.title}</span>
+                    <div className="task-title-row">
+                      <span className="task-title">{t.title}</span>
+                      {overdue && (
+                        <span className="badge badge--overdue badge--sm">Overdue</span>
+                      )}
+                    </div>
                     {t.description && <p className="task-description">{t.description}</p>}
                     <span className="task-meta">
                       Due: {due.toLocaleString()}
-                      {isOverdue && <span className="task-overdue-label"> (Overdue)</span>}
+                      {overdue && <span className="task-overdue-label"> (Overdue)</span>}
                       {t.assignedTo && ` · Assigned to: ${t.assignedTo.name}`}
                     </span>
                   </div>

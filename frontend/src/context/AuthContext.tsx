@@ -82,13 +82,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginDemo = useCallback(
     async (role: Role) => {
+      if (isSignedIn) {
+        await signOut();
+        setClerkUser(null);
+      }
       const data = await apiFetch<AuthResponse>("/api/auth/demo-login", {
         method: "POST",
         body: JSON.stringify({ role }),
       });
       return applyDemoSession(data);
     },
-    [applyDemoSession]
+    [applyDemoSession, isSignedIn, signOut]
   );
 
   const logout = useCallback(() => {
@@ -109,10 +113,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
   }, []);
 
-  const user = clerkUser ?? demoUser;
-  const isAuthenticated = Boolean(clerkUser || (demoToken && demoUser));
-  // Show loading while Clerk initialises or while syncing a signed-in user
-  const loading = !isLoaded || Boolean(isSignedIn && !clerkUser && !demoUser);
+  const hasDemoSession = Boolean(demoToken && demoUser);
+  const user = hasDemoSession ? demoUser : (clerkUser ?? demoUser);
+  const isAuthenticated = Boolean(clerkUser || hasDemoSession);
+  const loading = !isLoaded;
 
   const value = useMemo(
     () => ({

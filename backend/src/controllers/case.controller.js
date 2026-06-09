@@ -1,5 +1,10 @@
 const { ReferralStatus, CaseStatus } = require("@prisma/client");
 const { prisma } = require("../prisma");
+const {
+  countOverdueTasks,
+  serializeTask,
+} = require("../utils/taskOverdue");
+const { recordAuditLog } = require("../services/audit.service");
 
 const openCase = async (req, res) => {
   try {
@@ -40,6 +45,14 @@ const openCase = async (req, res) => {
       }),
     ]);
 
+    await recordAuditLog({
+      userId: req.user.id,
+      action: "CASE_CREATED",
+      details: `Case created for ${newCase.referral.studentName}`,
+      recordId: newCase.id,
+      recordType: "case",
+    });
+
     return res.status(201).json({
       message: "Case opened successfully",
       case: {
@@ -58,6 +71,7 @@ const openCase = async (req, res) => {
 
 const getCases = async (req, res) => {
   try {
+    const now = new Date();
     const cases = await prisma.case.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -71,6 +85,7 @@ const getCases = async (req, res) => {
           },
         },
         assignedTo: { select: { id: true, name: true, email: true } },
+        tasks: { select: { dueDate: true, completed: true } },
       },
     });
 
@@ -82,6 +97,7 @@ const getCases = async (req, res) => {
         updatedAt: c.updatedAt,
         referral: c.referral,
         assignedTo: c.assignedTo,
+        overdueTaskCount: countOverdueTasks(c.tasks, now),
       })),
     });
   } catch (err) {
@@ -111,7 +127,14 @@ const getCase = async (req, res) => {
       },
     });
     if (!c) return res.status(404).json({ error: "Case not found" });
-    return res.json({ case: c });
+
+    const now = new Date();
+    return res.json({
+      case: {
+        ...c,
+        tasks: c.tasks.map((task) => serializeTask(task, now)),
+      },
+    });
   } catch (err) {
     console.error("getCase error:", err);
     return res.status(500).json({ error: "Internal server error" });
@@ -183,11 +206,20 @@ const createTask = async (req, res) => {
         assignedToId,
         caseId: id,
       },
+      include: { assignedTo: { select: { id: true, name: true } } },
+    });
+
+    await recordAuditLog({
+      userId: req.user.id,
+      action: "TASK_CREATED",
+      details: `Task created: ${title}`,
+      recordId: task.id,
+      recordType: "task",
     });
 
     return res.status(201).json({
       message: "Task created successfully",
-      task,
+      task: serializeTask(task),
     });
   } catch (err) {
     console.error("createTask error:", err);
@@ -205,7 +237,7 @@ const markTaskComplete = async (req, res) => {
       data: { completed: true },
       include: { assignedTo: { select: { id: true, name: true } } },
     });
-    return res.json({ task: updated });
+    return res.json({ task: serializeTask(updated) });
   } catch (err) {
     console.error("markTaskComplete error:", err);
     return res.status(500).json({ error: "Internal server error" });
@@ -223,6 +255,14 @@ const createNote = async (req, res) => {
     const note = await prisma.note.create({
       data: { content, caseId: id, authorId: req.user.id },
       include: { author: { select: { id: true, name: true } } },
+    });
+
+    await recordAuditLog({
+      userId: req.user.id,
+      action: "NOTE_CREATED",
+      details: `Private note added to case`,
+      recordId: note.id,
+      recordType: "note",
     });
 
     return res.status(201).json({ note });
