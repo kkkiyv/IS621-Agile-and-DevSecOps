@@ -43,6 +43,8 @@ services:
         value: https://casehub-web-staging.onrender.com,http://localhost:5173
       - key: CLERK_SECRET_KEY
         sync: false
+      - key: CLERK_PUBLISHABLE_KEY
+        sync: false
 
   # ── STAGING FRONTEND ─────────────────────────────────────
   - type: web
@@ -82,6 +84,8 @@ services:
       - key: FRONTEND_URL
         value: https://casehub-web.onrender.com,http://localhost:5173
       - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_PUBLISHABLE_KEY
         sync: false
 
   # ── PRODUCTION FRONTEND ──────────────────────────────────

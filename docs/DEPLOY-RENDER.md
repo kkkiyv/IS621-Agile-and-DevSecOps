@@ -75,6 +75,7 @@ For **each** service below, open **Environment** in the Render dashboard.
 | Variable | Value |
 |----------|--------|
 | `CLERK_SECRET_KEY` | From Clerk dashboard (secret key) |
+| `CLERK_PUBLISHABLE_KEY` | Same publishable key as the static site (`pk_test_...`) — required for Clerk middleware on the API |
 
 ### Static sites (`casehub-web-staging` + `casehub-web`)
 

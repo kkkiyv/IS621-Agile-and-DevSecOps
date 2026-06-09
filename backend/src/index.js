@@ -110,7 +110,17 @@ app.get("/api/health/db", async (_req, res) => {
     res.status(500).json({ ok: false, error: err.message });
   }
 });
-app.use(clerkMiddleware());
+const clerkConfigured =
+  process.env.CLERK_SECRET_KEY?.trim() &&
+  process.env.CLERK_PUBLISHABLE_KEY?.trim();
+
+if (clerkConfigured) {
+  app.use(clerkMiddleware());
+} else {
+  console.warn(
+    "Clerk not configured on API (set CLERK_SECRET_KEY + CLERK_PUBLISHABLE_KEY). Demo mode works; Clerk sign-in will not."
+  );
+}
 app.use("/api/auth", authRoutes);
 app.use("/api/referrals", referralsRoutes);
 app.use("/api/cases", casesRoutes);
