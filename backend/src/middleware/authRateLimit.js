@@ -20,4 +20,30 @@ const authDemoLimiter = rateLimit({
   },
 });
 
-module.exports = { authLoginLimiter, authDemoLimiter };
+const authSyncLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Too many auth sync attempts. Please try again later.",
+  },
+});
+
+const globalApiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Too many requests. Please try again later.",
+  },
+  skip: (req) => req.path === "/health" || req.path === "/health/db",
+});
+
+module.exports = {
+  authLoginLimiter,
+  authDemoLimiter,
+  authSyncLimiter,
+  globalApiLimiter,
+};

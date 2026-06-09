@@ -23,6 +23,7 @@ if (process.env.RENDER === "true") {
 const express = require("express");
 const { clerkMiddleware } = require("@clerk/express");
 const cors = require("cors");
+const { globalApiLimiter } = require("./middleware/authRateLimit");
 const authRoutes = require("./routes/auth.routes");
 const referralsRoutes = require("./routes/referrals.routes");
 const casesRoutes = require("./routes/cases.routes");
@@ -95,21 +96,26 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "casehub-api" });
 });
 
-app.get("/api/health/db", async (_req, res) => {
-  try {
-    const { prisma } = require("./prisma");
-    const users = await prisma.user.count();
-    res.json({ ok: true, users });
-  } catch (err) {
-    console.error("DB health check failed:", err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
+// Dev-only DB probe — disabled on Render/production to avoid info disclosure.
+if (process.env.NODE_ENV !== "production" && process.env.RENDER !== "true") {
+  app.get("/api/health/db", async (_req, res) => {
+    try {
+      const { prisma } = require("./prisma");
+      const users = await prisma.user.count();
+      res.json({ ok: true, users });
+    } catch (err) {
+      console.error("DB health check failed:", err);
+      res.status(500).json({ ok: false, error: "Database unavailable" });
+    }
+  });
+}
+
+app.use("/api", globalApiLimiter);
 const clerkConfigured =
   Boolean(process.env.CLERK_SECRET_KEY?.trim()) &&
   Boolean(process.env.CLERK_PUBLISHABLE_KEY?.trim());

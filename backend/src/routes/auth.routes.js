@@ -2,7 +2,7 @@ const express = require("express");
 const { prisma } = require("../prisma");
 const { signToken } = require("../utils/jwt");
 const { validate } = require("../middleware/validate");
-const { authDemoLimiter } = require("../middleware/authRateLimit");
+const { authDemoLimiter, authSyncLimiter } = require("../middleware/authRateLimit");
 const { demoLoginValidation } = require("../validators/auth.validator");
 const { syncUser } = require("../controllers/auth.controller");
 
@@ -34,7 +34,7 @@ function issueSession(user, res) {
 }
 
 // Clerk sync endpoint
-router.post("/sync", syncUser);
+router.post("/sync", authSyncLimiter, syncUser);
 
 // Demo login (JWT-based, for demo/grading purposes)
 router.post(
@@ -57,7 +57,8 @@ router.post(
       return issueSession(user, res);
     } catch (e) {
       if (e.message?.includes("JWT_SECRET")) {
-        return res.status(500).json({ error: "Server misconfiguration: JWT_SECRET" });
+        console.error("Demo login: JWT_SECRET not configured");
+        return res.status(500).json({ error: "Server misconfiguration" });
       }
       console.error("Demo login error:", e);
       return res.status(500).json({ error: "Demo login failed" });

@@ -61,7 +61,7 @@ Use it as your master task list. Items marked **DONE** are already in the curren
 |---|------|----------|---------|
 | A1 | Add email/password login UI | High | Wire `LoginPage` to `POST /api/auth/login`; show errors; redirect by role |
 | A2 | Keep demo mode optional | Medium | Toggle or separate “Demo mode” section; hide in production |
-| A3 | Rate limit auth endpoints | High | Use `express-rate-limit` on `/api/auth/login` and `/api/auth/demo-login` (e.g. 5 req / 15 min per IP) |
+| A3 | Rate limit auth endpoints | High | Done: `authRateLimit.js` — demo-login 20/15m, sync 10/15m, global API 100/min per IP |
 | A4 | Validate login input | High | Email format, password required; use express-validator |
 | A5 | Enforce password policy | Medium | Min length (e.g. 8), document in README; apply on register if you add registration |
 | A6 | Frontend 401 handling | Medium | Redirect to login when token expired or invalid |
