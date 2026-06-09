@@ -46,10 +46,23 @@ function normalizeOrigin(value) {
   return `https://${toPublicRenderHost(trimmed)}`;
 }
 
-const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
-  .split(",")
-  .map(normalizeOrigin)
-  .filter(Boolean);
+const RENDER_FRONTEND_ORIGINS = {
+  "casehub-api": "https://casehub-web.onrender.com",
+  "casehub-api-staging": "https://casehub-web-staging.onrender.com",
+};
+
+const allowedOrigins = [
+  ...new Set(
+    [
+      ...(process.env.FRONTEND_URL || "http://localhost:5173")
+        .split(",")
+        .map(normalizeOrigin)
+        .filter(Boolean),
+      RENDER_FRONTEND_ORIGINS[process.env.RENDER_SERVICE_NAME],
+      "http://localhost:5173",
+    ].filter(Boolean)
+  ),
+];
 
 app.use(
   cors({
@@ -92,17 +105,30 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-const server = app.listen(port, () => {
-  console.log(`CaseHub API listening on http://localhost:${port}`);
-});
-
-server.on("error", (err) => {
-  if (err.code === "EADDRINUSE") {
-    console.error(
-      `Port ${port} is already in use. Stop the other Node process, then run npm run dev again.`
-    );
-    console.error("PowerShell: netstat -ano | findstr :4000  then  taskkill /PID <pid> /F");
-    process.exit(1);
+async function start() {
+  if (process.env.RENDER === "true") {
+    try {
+      const { seedDatabase } = require("../prisma/seed");
+      await seedDatabase();
+    } catch (err) {
+      console.error("Startup seed failed:", err);
+    }
   }
-  throw err;
-});
+
+  const server = app.listen(port, () => {
+    console.log(`CaseHub API listening on http://localhost:${port}`);
+  });
+
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(
+        `Port ${port} is already in use. Stop the other Node process, then run npm run dev again.`
+      );
+      console.error("PowerShell: netstat -ano | findstr :4000  then  taskkill /PID <pid> /F");
+      process.exit(1);
+    }
+    throw err;
+  });
+}
+
+start();

@@ -59,7 +59,7 @@ router.post(
       if (e.message?.includes("JWT_SECRET")) {
         return res.status(500).json({ error: "Server misconfiguration: JWT_SECRET" });
       }
-      console.error(e);
+      console.error("Demo login error:", e);
       return res.status(500).json({ error: "Demo login failed" });
     }
   }

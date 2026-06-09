@@ -102,9 +102,9 @@ Click **Save** → Render redeploys the API.
 
 ## Step 5 — Seed both databases
 
-**Free tier:** Render **Shell** requires a paid plan. Demo data is seeded automatically during each API **build** (`npx prisma db seed` in `render.yaml`). After changing seed data, redeploy the API service (or push to the matching branch).
+**Free tier:** Render **Shell** requires a paid plan. Demo data is seeded automatically when the API **starts** on Render (see `backend/src/index.js`). After changing seed data, redeploy the API service (or push to the matching branch).
 
-To confirm seed ran, open **`casehub-api`** → **Logs** → latest deploy → look for `Seed complete:` in the build log.
+To confirm seed ran, open **`casehub-api`** → **Logs** → runtime log (after `CaseHub API listening`) → look for `Seed complete:`.
 
 **Paid tier (optional):** You can still run `npx prisma db seed` manually in Shell.
 

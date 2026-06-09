@@ -8,7 +8,7 @@ const {
 
 const prisma = new PrismaClient();
 
-async function main() {
+async function seedDatabase() {
 
   const teacher = await prisma.user.upsert({
     where: { email: "ghimchong96+teacher@gmail.com" },
@@ -197,10 +197,14 @@ async function main() {
   });
 }
 
-main()
-  .then(() => prisma.$disconnect())
-  .catch((e) => {
-    console.error(e);
-    prisma.$disconnect();
-    process.exit(1);
-  });
+module.exports = { seedDatabase };
+
+if (require.main === module) {
+  seedDatabase()
+    .then(() => prisma.$disconnect())
+    .catch((e) => {
+      console.error(e);
+      prisma.$disconnect();
+      process.exit(1);
+    });
+}
