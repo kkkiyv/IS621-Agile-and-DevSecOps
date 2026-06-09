@@ -51,7 +51,6 @@ services:
   - type: web
     name: casehub-web-staging
     runtime: static
-    plan: free
     branch: staging
     rootDir: frontend
     buildCommand: npm install && npm run build
@@ -98,7 +97,6 @@ services:
   - type: web
     name: casehub-web
     runtime: static
-    plan: free
     branch: main
     rootDir: frontend
     buildCommand: npm install && npm run build

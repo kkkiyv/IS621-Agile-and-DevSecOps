@@ -177,6 +177,7 @@ Frontend uses **HashRouter** (`/#/…`) — no SPA rewrite rules needed on Rende
 
 | Problem | Fix |
 |---------|-----|
+| Blueprint: `no such plan free for service type web` on static sites | Remove `plan: free` from `runtime: static` services — static sites are free by default and do not accept a plan field. |
 | Blueprint fails: 2nd Postgres | Free tier = 1 DB. Use one Postgres; point staging API to a `casehub_staging` database via manual `DATABASE_URL`, or upgrade plan. |
 | CORS error in browser | Set `FRONTEND_URL` on API to full static site URL + localhost |
 | Login / API network error | Check `VITE_API_URL` on static site; redeploy frontend |
