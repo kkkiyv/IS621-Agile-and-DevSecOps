@@ -1,14 +1,24 @@
 const path = require("path");
 
-require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
-// .env.local is for local dev only — never override Render/production env vars.
+// On Render, use dashboard env vars only — never load local .env files.
 if (!process.env.RENDER) {
+  require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
   require("dotenv").config({
     path: path.resolve(__dirname, "../.env.local"),
     override: true,
   });
+  require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 }
-require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
+
+if (process.env.RENDER === "true") {
+  const dbUrl = process.env.DATABASE_URL || "";
+  if (!dbUrl || dbUrl.includes("localhost")) {
+    console.error(
+      "DATABASE_URL is missing or points to localhost. In Render, open casehub-api → Environment and link DATABASE_URL to casehub-db."
+    );
+    process.exit(1);
+  }
+}
 
 const express = require("express");
 const { clerkMiddleware } = require("@clerk/express");
