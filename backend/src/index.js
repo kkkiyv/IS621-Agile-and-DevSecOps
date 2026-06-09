@@ -111,8 +111,8 @@ app.get("/api/health/db", async (_req, res) => {
   }
 });
 const clerkConfigured =
-  process.env.CLERK_SECRET_KEY?.trim() &&
-  process.env.CLERK_PUBLISHABLE_KEY?.trim();
+  Boolean(process.env.CLERK_SECRET_KEY?.trim()) &&
+  Boolean(process.env.CLERK_PUBLISHABLE_KEY?.trim());
 
 if (clerkConfigured) {
   app.use(clerkMiddleware());
