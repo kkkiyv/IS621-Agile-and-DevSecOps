@@ -71,9 +71,9 @@ export function LoginPage() {
 
       {missingApiUrl && (
         <p className="login-deploy-warning" role="alert">
-          This build has no API URL configured. Set GitHub secret{" "}
-          <code>VITE_API_URL</code> to your public backend, then redeploy. See{" "}
-          <code>docs/DEPLOY-GITHUB-PAGES.md</code>.
+          This build has no API URL configured. On Render, set{" "}
+          <code>VITE_API_URL</code> on the static site to your public API URL
+          (e.g. <code>https://casehub-api.onrender.com</code>), then redeploy.
         </p>
       )}
 

@@ -23,13 +23,27 @@ if (process.env.RENDER || process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 
+function toPublicRenderHost(host) {
+  const normalized = host.replace(/\/$/, "");
+  if (!normalized.includes(".")) {
+    return `${normalized}.onrender.com`;
+  }
+  return normalized;
+}
+
 function normalizeOrigin(value) {
   const trimmed = value.trim();
   if (!trimmed) return null;
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return trimmed;
+    try {
+      const url = new URL(trimmed);
+      url.hostname = toPublicRenderHost(url.hostname);
+      return url.origin;
+    } catch {
+      return trimmed;
+    }
   }
-  return `https://${trimmed}`;
+  return `https://${toPublicRenderHost(trimmed)}`;
 }
 
 const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")

@@ -1,10 +1,20 @@
+function toPublicRenderHost(host: string): string {
+  const normalized = host.replace(/\/$/, "");
+  if (!normalized.includes(".")) {
+    return `${normalized}.onrender.com`;
+  }
+  return normalized;
+}
+
 function normalizeApiBase(raw: string | undefined): string {
   const trimmed = (raw ?? "").trim();
   if (!trimmed) return "";
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return trimmed.replace(/\/$/, "");
+    const url = new URL(trimmed);
+    url.hostname = toPublicRenderHost(url.hostname);
+    return url.toString().replace(/\/$/, "");
   }
-  return `https://${trimmed.replace(/\/$/, "")}`;
+  return `https://${toPublicRenderHost(trimmed)}`;
 }
 
 const API_BASE = normalizeApiBase(import.meta.env.VITE_API_URL);
