@@ -102,15 +102,11 @@ Click **Save** → Render redeploys the API.
 
 ## Step 5 — Seed both databases
 
-For **each** API service, open **Shell** and run:
+**Free tier:** Render **Shell** requires a paid plan. Demo data is seeded automatically during each API **build** (`npx prisma db seed` in `render.yaml`). After changing seed data, redeploy the API service (or push to the matching branch).
 
-```bash
-npx prisma db seed
-```
+To confirm seed ran, open **`casehub-api`** → **Logs** → latest deploy → look for `Seed complete:` in the build log.
 
-Do this for:
-1. `casehub-api-staging`
-2. `casehub-api` (production)
+**Paid tier (optional):** You can still run `npx prisma db seed` manually in Shell.
 
 ---
 
@@ -182,7 +178,8 @@ Frontend uses **HashRouter** (`/#/…`) — no SPA rewrite rules needed on Rende
 | CORS error in browser | Set `FRONTEND_URL` on API to full static site URL + localhost |
 | Demo login: **Failed to fetch** | `VITE_API_URL` must be full public URL (`https://casehub-api.onrender.com`), not internal host (`casehub-api`). Update env var → **Manual Deploy** static site (clear build cache). |
 | Login / API network error | Check `VITE_API_URL` on static site; redeploy frontend |
-| API 500 / schema errors | API Shell: `npx prisma migrate deploy` then `npx prisma db seed` |
+| API 500 / schema errors | Redeploy API (build runs migrate + seed). Paid plan: Shell `npx prisma migrate deploy` then `npx prisma db seed` |
+| Shell not available (free tier) | Seed runs on API build automatically; use **Manual Deploy** on `casehub-api` |
 | Blank website | Check static site build logs; ensure `npm run build` succeeds |
 | Slow first load (free tier) | Services sleep after ~15 min idle; first request takes ~30s |
 | Clerk sign-in fails | Set `CLERK_SECRET_KEY` on API + `VITE_CLERK_PUBLISHABLE_KEY` on static site; add Render URLs in Clerk |
