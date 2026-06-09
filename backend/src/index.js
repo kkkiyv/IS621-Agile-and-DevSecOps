@@ -1,10 +1,13 @@
 const path = require("path");
 
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
-require("dotenv").config({
-  path: path.resolve(__dirname, "../.env.local"),
-  override: true,
-});
+// .env.local is for local dev only — never override Render/production env vars.
+if (!process.env.RENDER) {
+  require("dotenv").config({
+    path: path.resolve(__dirname, "../.env.local"),
+    override: true,
+  });
+}
 require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 
 const express = require("express");
