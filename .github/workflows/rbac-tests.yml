@@ -76,6 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-and-test, lint, security]
     if: github.event_name == 'pull_request'
+    continue-on-error: true
 
     steps:
       - name: Enable auto-merge
