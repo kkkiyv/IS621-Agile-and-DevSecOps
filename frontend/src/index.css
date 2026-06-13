@@ -569,6 +569,9 @@ a {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 1.1rem;
   font-weight: 1000;
   white-space: nowrap;
