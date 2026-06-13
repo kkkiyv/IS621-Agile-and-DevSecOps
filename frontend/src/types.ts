@@ -51,6 +51,8 @@ export interface CounsellorReferral {
 
 export type CaseStatus = "OPEN" | "IN_PROGRESS" | "CLOSED";
 
+export type CaseOutcome = "ONGOING" | "RESOLVED" | "REFERRED_EXTERNALLY" | "NO_FURTHER_ACTIONS";
+
 export type SessionType = "INDIVIDUAL" | "GROUP" | "FAMILY" | "CRISIS";
 
 export interface SessionNote {
@@ -71,6 +73,9 @@ export interface SessionNote {
 export interface Case {
   id: string;
   status: CaseStatus;
+  riskLevel?: RiskLevel | null;
+  outcome?: CaseOutcome | null;
+  outcomeNotes?: string | null;
   createdAt: string;
   updatedAt: string;
   referral: {

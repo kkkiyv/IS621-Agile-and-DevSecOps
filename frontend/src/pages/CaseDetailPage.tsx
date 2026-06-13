@@ -4,7 +4,7 @@ import { Layout } from "../components/Layout";
 import { apiFetch } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useNow } from "../hooks/useNow";
-import type { Case, CaseStatus, Note, SessionNote, SessionType, Task } from "../types";
+import type { Case, CaseOutcome, CaseStatus, Note, RiskLevel, SessionNote, SessionType, Task } from "../types";
 import { formatRelativeTime } from "../utils/format";
 import { isTaskOverdue, sortTasksForDisplay } from "../utils/taskOverdue";
 
@@ -38,6 +38,13 @@ export function CaseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
   const [completing, setCompleting] = useState<string | null>(null);
+
+  const [outcomeFormOpen, setOutcomeFormOpen] = useState(false);
+  const [outcomeRisk, setOutcomeRisk] = useState<RiskLevel | "">("");
+  const [outcomeValue, setOutcomeValue] = useState<CaseOutcome | "">("");
+  const [outcomeNotes, setOutcomeNotes] = useState("");
+  const [outcomeSubmitting, setOutcomeSubmitting] = useState(false);
+  const [outcomeError, setOutcomeError] = useState<string | null>(null);
 
   const [formOpen, setFormOpen] = useState(false);
   const [taskTitle, setTaskTitle] = useState("");
@@ -186,6 +193,43 @@ export function CaseDetailPage() {
     }
   }
 
+  function openOutcomeForm() {
+    setOutcomeRisk(caseData?.riskLevel ?? "");
+    setOutcomeValue(caseData?.outcome ?? "");
+    setOutcomeNotes(caseData?.outcomeNotes ?? "");
+    setOutcomeError(null);
+    setOutcomeFormOpen(true);
+  }
+
+  async function handleUpdateOutcome(e: React.FormEvent) {
+    e.preventDefault();
+    setOutcomeSubmitting(true);
+    setOutcomeError(null);
+    try {
+      const result = await apiFetch<{ case: { riskLevel: RiskLevel | null; outcome: CaseOutcome | null; outcomeNotes: string | null } }>(
+        `/api/cases/${id}/outcome`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            riskLevel: outcomeRisk || null,
+            outcome: outcomeValue || null,
+            outcomeNotes: outcomeNotes.trim() || null,
+          }),
+        }
+      );
+      setCaseData((prev) =>
+        prev
+          ? { ...prev, riskLevel: result.case.riskLevel, outcome: result.case.outcome, outcomeNotes: result.case.outcomeNotes }
+          : prev
+      );
+      setOutcomeFormOpen(false);
+    } catch (e) {
+      setOutcomeError(e instanceof Error ? e.message : "Failed to update");
+    } finally {
+      setOutcomeSubmitting(false);
+    }
+  }
+
   async function handleCloseCase() {
     setClosing(true);
     try {
@@ -220,9 +264,10 @@ export function CaseDetailPage() {
             <span className={statusBadgeClass(caseData.status)}>
               {STATUS_LABELS[caseData.status]}
             </span>
-            {caseData.referral.riskLevel && (
-              <span className={riskBadgeClass(caseData.referral.riskLevel)}>
-                {caseData.referral.riskLevel.charAt(0) + caseData.referral.riskLevel.slice(1).toLowerCase()}
+            {(caseData.riskLevel ?? caseData.referral.riskLevel) && (
+              <span className={riskBadgeClass(caseData.riskLevel ?? caseData.referral.riskLevel!)}>
+                {(caseData.riskLevel ?? caseData.referral.riskLevel)!.charAt(0) +
+                 (caseData.riskLevel ?? caseData.referral.riskLevel)!.slice(1).toLowerCase()}
               </span>
             )}
           </div>
@@ -246,6 +291,91 @@ export function CaseDetailPage() {
         </div>
 
         {error && <p className="form-error">{error}</p>}
+
+        {/* Risk & Outcome card */}
+        <div className="card" style={{ padding: "1.5rem" }}>
+          <div className="case-tasks-header" style={{ marginBottom: "1rem" }}>
+            <h3 style={{ margin: 0 }}>Risk &amp; Outcome</h3>
+            {!isClosed && !outcomeFormOpen && (
+              <button type="button" className="btn btn-secondary btn-sm" onClick={openOutcomeForm}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "0.3rem" }}>
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Update
+              </button>
+            )}
+          </div>
+
+          {outcomeFormOpen ? (
+            <form onSubmit={handleUpdateOutcome}>
+              {outcomeError && <p className="form-error">{outcomeError}</p>}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+                <label className="field">
+                  <span>Risk Level</span>
+                  <select value={outcomeRisk} onChange={(e) => setOutcomeRisk(e.target.value as RiskLevel | "")}>
+                    <option value="">— Select —</option>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Outcome</span>
+                  <select value={outcomeValue} onChange={(e) => setOutcomeValue(e.target.value as CaseOutcome | "")}>
+                    <option value="">— Select —</option>
+                    <option value="ONGOING">Ongoing</option>
+                    <option value="RESOLVED">Resolved</option>
+                    <option value="REFERRED_EXTERNALLY">Referred externally</option>
+                    <option value="NO_FURTHER_ACTIONS">No Further Actions</option>
+                  </select>
+                </label>
+              </div>
+              <label className="field" style={{ marginBottom: "1rem" }}>
+                <span>Outcome Notes</span>
+                <textarea
+                  rows={3}
+                  placeholder="Describe the outcome, rationale for risk change, next steps, etc."
+                  value={outcomeNotes}
+                  onChange={(e) => setOutcomeNotes(e.target.value)}
+                  disabled={outcomeSubmitting}
+                />
+              </label>
+              <div className="task-form-actions">
+                <button type="submit" className="btn btn-primary btn-sm" disabled={outcomeSubmitting}>
+                  {outcomeSubmitting ? "Saving…" : "Save Changes"}
+                </button>
+                <button type="button" className="btn btn-ghost btn-sm" disabled={outcomeSubmitting} onClick={() => setOutcomeFormOpen(false)}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div>
+                <p className="field-label" style={{ margin: "0 0 0.4rem", fontSize: "0.8rem", color: "var(--muted)" }}>Current Risk Level</p>
+                {(caseData.riskLevel ?? caseData.referral.riskLevel) ? (
+                  <span className={riskBadgeClass(caseData.riskLevel ?? caseData.referral.riskLevel!)}>
+                    {(caseData.riskLevel ?? caseData.referral.riskLevel)!.charAt(0) +
+                     (caseData.riskLevel ?? caseData.referral.riskLevel)!.slice(1).toLowerCase()}
+                  </span>
+                ) : (
+                  <span className="muted" style={{ fontSize: "0.85rem" }}>Not set</span>
+                )}
+              </div>
+              <div>
+                <p className="field-label" style={{ margin: "0 0 0.4rem", fontSize: "0.8rem", color: "var(--muted)" }}>Case Outcome</p>
+                <span style={{ fontWeight: 500 }}>
+                  {caseData.outcome === "ONGOING" ? "Ongoing"
+                   : caseData.outcome === "RESOLVED" ? "Resolved"
+                   : caseData.outcome === "REFERRED_EXTERNALLY" ? "Referred externally"
+                   : caseData.outcome === "NO_FURTHER_ACTIONS" ? "No Further Actions"
+                   : <span className="muted" style={{ fontSize: "0.85rem" }}>Not set</span>}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="card" style={{ padding: "1.5rem" }}>
         <div className="case-tasks-header">
