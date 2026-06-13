@@ -32,6 +32,13 @@ enum CaseStatus {
   CLOSED
 }
 
+enum CaseOutcome {
+  ONGOING
+  RESOLVED
+  REFERRED_EXTERNALLY
+  NO_FURTHER_ACTIONS
+}
+
 enum SessionType {
   INDIVIDUAL
   GROUP
@@ -90,6 +97,9 @@ model Case {
   assignedTo    User           @relation(fields: [assignedToId], references: [id])
   assignedToId  String
   status        CaseStatus     @default(OPEN)
+  riskLevel     RiskLevel?
+  outcome       CaseOutcome?
+  outcomeNotes  String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   tasks         Task[]

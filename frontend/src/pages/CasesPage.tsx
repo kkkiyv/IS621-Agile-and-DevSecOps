@@ -104,9 +104,9 @@ export function CasesPage() {
                 <span className={statusBadgeClass(c.status)}>
                   {STATUS_LABELS[c.status]}
                 </span>
-                {c.referral.riskLevel && (
-                  <span className={riskBadgeClass(c.referral.riskLevel)}>
-                    {RISK_LABELS[c.referral.riskLevel]}
+                {(c.riskLevel ?? c.referral.riskLevel) && (
+                  <span className={riskBadgeClass(c.riskLevel ?? c.referral.riskLevel)}>
+                    {RISK_LABELS[(c.riskLevel ?? c.referral.riskLevel)!]}
                   </span>
                 )}
                 {(c.overdueTaskCount ?? 0) > 0 && (

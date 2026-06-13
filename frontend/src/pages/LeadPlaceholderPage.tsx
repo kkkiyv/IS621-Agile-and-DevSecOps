@@ -43,6 +43,20 @@ function maxCaseStatus(counts: Record<CaseStatus, number>): number {
   return Math.max(counts.OPEN, counts.IN_PROGRESS, counts.CLOSED, 1);
 }
 
+function getPieLabels(counts: Record<RiskLevel, number>) {
+  const total = counts.HIGH + counts.MEDIUM + counts.LOW;
+  const LABEL_R = 105; // distance from center to label
+  const C = 136;       // wrapper center (wrapper = 272px = 17rem)
+  let angle = 0;
+  return (["HIGH", "MEDIUM", "LOW"] as RiskLevel[]).map((level) => {
+    const slice = total === 0 ? 120 : (counts[level] / total) * 360;
+    const mid = angle + slice / 2;
+    const rad = (mid - 90) * (Math.PI / 180);
+    angle += slice;
+    return { level, count: counts[level], x: C + LABEL_R * Math.cos(rad), y: C + LABEL_R * Math.sin(rad) };
+  });
+}
+
 export function LeadPlaceholderPage() {
   const [data, setData] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,52 +106,52 @@ export function LeadPlaceholderPage() {
         <>
           <div className="dash-kpi-grid">
             <div className="card dash-kpi-card">
+              <div>
+                <span className="dash-kpi-label">Total Referrals</span>
+                <span className="dash-kpi-value">{metrics.totalReferrals}</span>
+              </div>
               <div className="dash-kpi-icon dash-kpi-icon--blue" aria-hidden>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
                   <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
                 </svg>
               </div>
-              <div>
-                <span className="dash-kpi-label">Total Referrals</span>
-                <span className="dash-kpi-value">{metrics.totalReferrals}</span>
-              </div>
             </div>
             <div className="card dash-kpi-card">
+              <div>
+                <span className="dash-kpi-label">Active Cases</span>
+                <span className="dash-kpi-value">{metrics.activeCases}</span>
+              </div>
               <div className="dash-kpi-icon dash-kpi-icon--green" aria-hidden>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
                   <path d="M22 4L12 14.01l-3-3" />
                 </svg>
               </div>
-              <div>
-                <span className="dash-kpi-label">Active Cases</span>
-                <span className="dash-kpi-value">{metrics.activeCases}</span>
-              </div>
             </div>
             <div className="card dash-kpi-card">
-              <div className="dash-kpi-icon dash-kpi-icon--red" aria-hidden>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                  <line x1="12" y1="9" x2="12" y2="13" />
-                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
-              </div>
               <div>
                 <span className="dash-kpi-label">Overdue Tasks</span>
                 <span className="dash-kpi-value dash-kpi-value--alert">{metrics.overdueTasks}</span>
               </div>
+              <div className="dash-kpi-icon dash-kpi-icon--red" aria-hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <circle cx="12" cy="17" r="0.5" fill="currentColor" stroke="none" />
+                </svg>
+              </div>
             </div>
             <div className="card dash-kpi-card">
+              <div>
+                <span className="dash-kpi-label">Open Tasks</span>
+                <span className="dash-kpi-value">{metrics.openTasks}</span>
+              </div>
               <div className="dash-kpi-icon dash-kpi-icon--amber" aria-hidden>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="10" />
                   <path d="M12 6v6l4 2" />
                 </svg>
-              </div>
-              <div>
-                <span className="dash-kpi-label">Open Tasks</span>
-                <span className="dash-kpi-value">{metrics.openTasks}</span>
               </div>
             </div>
           </div>
@@ -152,37 +166,46 @@ export function LeadPlaceholderPage() {
                   role="img"
                   aria-label="Referrals by risk level pie chart"
                 />
-                <ul className="dash-pie-legend">
-                  {(["HIGH", "MEDIUM", "LOW"] as RiskLevel[]).map((level) => (
-                    <li key={level}>
-                      <span
-                        className="dash-legend-dot"
-                        style={{ background: RISK_COLORS[level] }}
-                      />
-                      {RISK_LABELS[level]}: {data.referralsByRisk[level]}
-                    </li>
-                  ))}
-                </ul>
+                {getPieLabels(data.referralsByRisk).map(({ level, count, x, y }) => (
+                  <span
+                    key={level}
+                    className="dash-pie-label"
+                    style={{ left: x, top: y, color: RISK_COLORS[level] }}
+                  >
+                    {RISK_LABELS[level]}: {count}
+                  </span>
+                ))}
               </div>
             </section>
 
             <section className="card dash-chart-card">
               <h3>Cases by Status</h3>
               <div className="dash-bar-chart">
-                {(["OPEN", "IN_PROGRESS", "CLOSED"] as CaseStatus[]).map((status) => (
-                  <div key={status} className="dash-bar-col">
-                    <div className="dash-bar-track">
-                      <div
-                        className="dash-bar-fill"
-                        style={{
-                          height: `${(data.casesByStatus[status] / barMax) * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <span className="dash-bar-label">{STATUS_LABELS[status]}</span>
-                    <span className="dash-bar-count">{data.casesByStatus[status]}</span>
+                <div className="dash-bar-y-axis">
+                  {[1, 0.75, 0.5, 0.25, 0].map((v) => (
+                    <span key={v}>{v}</span>
+                  ))}
+                </div>
+                <div className="dash-bar-body">
+                  <div className="dash-bar-area">
+                    {[1, 0.75, 0.5, 0.25, 0].map((v) => (
+                      <div key={v} className="dash-bar-gridline" style={{ bottom: `${v * 100}%` }} />
+                    ))}
+                    {(["OPEN", "IN_PROGRESS", "CLOSED"] as CaseStatus[]).map((status) => (
+                      <div key={status} className="dash-bar-col">
+                        <div
+                          className="dash-bar-fill"
+                          style={{ height: `${(data.casesByStatus[status] / barMax) * 100}%` }}
+                        />
+                      </div>
+                    ))}
                   </div>
-                ))}
+                  <div className="dash-bar-xlabels">
+                    {(["OPEN", "IN_PROGRESS", "CLOSED"] as CaseStatus[]).map((status) => (
+                      <span key={status}>{STATUS_LABELS[status]}</span>
+                    ))}
+                  </div>
+                </div>
               </div>
             </section>
           </div>

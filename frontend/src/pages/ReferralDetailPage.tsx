@@ -12,6 +12,12 @@ function statusBadgeClass(status: string): string {
   return "badge badge--submitted";
 }
 
+function riskBadgeClass(level?: string | null): string {
+  if (level === "HIGH") return "badge badge--risk-high";
+  if (level === "LOW") return "badge badge--risk-low";
+  return "badge badge--risk-medium";
+}
+
 export function ReferralDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -109,7 +115,7 @@ export function ReferralDetailPage() {
                 {referral.statusLabel}
               </span>
               {referral.riskLevelLabel && (
-                <span className="badge badge--risk-medium">
+                <span className={riskBadgeClass(referral.riskLevel)}>
                   {referral.riskLevelLabel}
                 </span>
               )}

@@ -4,7 +4,7 @@ const { authenticate } = require("../middleware/authenticate");
 const { requireRole } = require("../middleware/requireRole");
 const { validate } = require("../middleware/validate");
 const { asyncHandler } = require("../middleware/asyncHandler");
-const { openCase, getCases, getCase, updateCaseStatus, createTask, markTaskComplete, createNote } = require("../controllers/case.controller");
+const { openCase, getCases, getCase, updateCaseStatus, updateCaseOutcome, createTask, markTaskComplete, createNote } = require("../controllers/case.controller");
 const { createSessionNote, getSessionNotes } = require("../controllers/session.controller");
 
 const router = express.Router();
@@ -43,6 +43,15 @@ router.patch(
   body("status").isString().notEmpty().withMessage("status is required"),
   validate,
   asyncHandler(updateCaseStatus)
+);
+
+/** CH-004 — Counsellor updates case risk level and outcome */
+router.patch(
+  "/:id/outcome",
+  authenticate,
+  requireRole("COUNSELLOR", "LEAD_ADMIN"),
+  validate,
+  asyncHandler(updateCaseOutcome)
 );
 
 /** CH-007 — Counsellor creates a follow-up task */
