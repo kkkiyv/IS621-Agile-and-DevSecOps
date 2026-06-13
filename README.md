@@ -64,6 +64,11 @@ JWT is stored in `sessionStorage`. Auth routes are rate-limited (5 login attempt
 
 ## Stack
 
+<!-- CH-016: CI pipeline with quality and security checks -->
+
+
+
+
 - **Frontend:** React 18, TypeScript, Vite, React Router
 - **Backend:** Node.js, Express, JWT, Prisma
 - **DB:** PostgreSQL (Docker Compose)
