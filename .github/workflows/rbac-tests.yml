@@ -25,7 +25,7 @@ jobs:
         run: npm install
         working-directory: backend
 
-      - name: Run RBAC regression tests
+      - name: Run automated tests
         run: npm test
         working-directory: backend
 
