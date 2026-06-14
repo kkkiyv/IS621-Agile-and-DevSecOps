@@ -25,8 +25,12 @@ jobs:
         run: npm install
         working-directory: backend
 
-      - name: Run automated tests
-        run: npm test
+      - name: Run unit tests
+        run: npx jest --testPathPattern=tests/unit --verbose
+        working-directory: backend
+
+      - name: Run integration tests
+        run: npx jest --testPathPattern=tests/integration --verbose
         working-directory: backend
 
   lint:
