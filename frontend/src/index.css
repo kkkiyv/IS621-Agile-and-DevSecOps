@@ -575,6 +575,11 @@ a {
   font-size: 1.1rem;
   font-weight: 1000;
   white-space: nowrap;
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
 }
 
 .nav-tabs {
