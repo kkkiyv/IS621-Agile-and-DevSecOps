@@ -1,4 +1,4 @@
-const { ReferralStatus, CaseStatus } = require("@prisma/client");
+const { ReferralStatus, CaseStatus, RiskLevel, CaseOutcome } = require("@prisma/client");
 const { prisma } = require("../prisma");
 const {
   countOverdueTasks,
@@ -93,6 +93,7 @@ const getCases = async (req, res) => {
       cases: cases.map((c) => ({
         id: c.id,
         status: c.status,
+        riskLevel: c.riskLevel,
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
         referral: c.referral,
@@ -132,6 +133,9 @@ const getCase = async (req, res) => {
     return res.json({
       case: {
         ...c,
+        riskLevel: c.riskLevel,
+        outcome: c.outcome,
+        outcomeNotes: c.outcomeNotes,
         tasks: c.tasks.map((task) => serializeTask(task, now)),
       },
     });
@@ -272,4 +276,45 @@ const createNote = async (req, res) => {
   }
 };
 
-module.exports = { openCase, getCases, getCase, updateCaseStatus, createTask, markTaskComplete, createNote };
+const VALID_RISK_LEVELS = Object.values(RiskLevel);
+const VALID_OUTCOMES = Object.values(CaseOutcome);
+
+const updateCaseOutcome = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { riskLevel, outcome, outcomeNotes } = req.body;
+
+    if (riskLevel !== undefined && riskLevel !== null && !VALID_RISK_LEVELS.includes(riskLevel)) {
+      return res.status(400).json({ error: `Invalid riskLevel. Must be one of: ${VALID_RISK_LEVELS.join(", ")}` });
+    }
+    if (outcome !== undefined && outcome !== null && !VALID_OUTCOMES.includes(outcome)) {
+      return res.status(400).json({ error: `Invalid outcome. Must be one of: ${VALID_OUTCOMES.join(", ")}` });
+    }
+
+    const existing = await prisma.case.findUnique({ where: { id }, select: { referralId: true } });
+    if (!existing) return res.status(404).json({ error: "Case not found" });
+
+    const caseData = { ...(riskLevel !== undefined && { riskLevel: riskLevel ?? null }), ...(outcome !== undefined && { outcome: outcome ?? null }), ...(outcomeNotes !== undefined && { outcomeNotes: outcomeNotes ?? null }) };
+    const ops = [prisma.case.update({ where: { id }, data: caseData })];
+    if (riskLevel !== undefined) {
+      ops.push(prisma.referral.update({ where: { id: existing.referralId }, data: { riskLevel: riskLevel ?? null } }));
+    }
+    const [updated] = await prisma.$transaction(ops);
+
+    return res.json({
+      message: "Case outcome updated",
+      case: {
+        id: updated.id,
+        riskLevel: updated.riskLevel,
+        outcome: updated.outcome,
+        outcomeNotes: updated.outcomeNotes,
+        updatedAt: updated.updatedAt,
+      },
+    });
+  } catch (err) {
+    console.error("updateCaseOutcome error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+module.exports = { openCase, getCases, getCase, updateCaseStatus, updateCaseOutcome, createTask, markTaskComplete, createNote };

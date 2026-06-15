@@ -5,30 +5,16 @@ import { useAuth } from "../context/AuthContext";
 import type { Role } from "../types";
 import { redirectAfterLogin } from "../utils/authRedirect";
 
-const roles: {
-  role: Role;
-  title: string;
-  description: string;
-  color: string;
-}[] = [
-  {
-    role: "TEACHER",
-    title: "Teacher",
-    description: "Submit and track referrals",
-    color: "role-card--teacher",
-  },
-  {
-    role: "COUNSELLOR",
-    title: "Counsellor",
-    description: "Triage and manage cases",
-    color: "role-card--counsellor",
-  },
-  {
-    role: "LEAD_ADMIN",
-    title: "Lead",
-    description: "View dashboard and audit logs",
-    color: "role-card--lead",
-  },
+const ShieldIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="28" height="28">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </svg>
+);
+
+const roles: { role: Role; title: string; description: string }[] = [
+  { role: "TEACHER", title: "Teacher", description: "Submit and track referrals" },
+  { role: "COUNSELLOR", title: "Counsellor", description: "Triage and manage cases" },
+  { role: "LEAD_ADMIN", title: "Lead", description: "Dashboard & audit logs" },
 ];
 
 export function LoginPage() {
@@ -36,8 +22,8 @@ export function LoginPage() {
   const { loginDemo, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
-  const [demoLoading, setDemoLoading] = useState<Role | null>(null);
   const [showDemo, setShowDemo] = useState(false);
+  const [demoLoading, setDemoLoading] = useState<Role | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -59,77 +45,56 @@ export function LoginPage() {
   };
 
   const busy = demoLoading !== null;
-  const missingApiUrl =
-    import.meta.env.PROD && !import.meta.env.VITE_API_URL?.trim();
 
   return (
-    <div className="login-page">
-      <div className="login-header">
-        <h1 className="login-title">Student Support Portal</h1>
-        <p className="login-subtitle">Sign in to CaseHub</p>
+    <div className="lp-page">
+      <div className="lp-brand">
+        <div className="lp-brand-icon">
+          <ShieldIcon />
+        </div>
+        <h1 className="lp-brand-title">CaseHub</h1>
+        <p className="lp-brand-sub">Student Referral &amp; Case Management</p>
       </div>
 
-      {missingApiUrl && (
-        <p className="login-deploy-warning" role="alert">
-          This build has no API URL configured. On Render, set{" "}
-          <code>VITE_API_URL</code> on the static site to your public API URL
-          (e.g. <code>https://casehub-api.onrender.com</code>), then redeploy.
-        </p>
-      )}
-
-      <div className="card login-card form-card">
-        <button
-          type="button"
-          className="btn btn-primary login-submit"
-          disabled={busy}
-          onClick={() => openSignIn()}
-        >
-          Sign in with Clerk
+      <div className="lp-card">
+        <button type="button" className="lp-submit" disabled={busy} onClick={() => openSignIn()}>
+          Sign in
         </button>
+
+        <div className="lp-demo">
+          <button
+            type="button"
+            className="lp-demo-toggle"
+            disabled={busy}
+            onClick={() => { setShowDemo((v) => !v); setError(null); }}
+          >
+            <span>Demo credentials</span>
+            <span className="lp-demo-arrow">{showDemo ? "▲" : "▼"}</span>
+          </button>
+          {showDemo && (
+            <div className="lp-demo-body">
+              {error && <p className="form-error" style={{ marginBottom: "0.75rem" }}>{error}</p>}
+              <p className="lp-demo-hint">Select a role — no password required</p>
+              <div className="lp-demo-roles">
+                {roles.map((r) => (
+                  <button
+                    key={r.role}
+                    type="button"
+                    className="lp-demo-role"
+                    disabled={busy}
+                    onClick={() => handleDemoSelect(r.role)}
+                  >
+                    <span className="lp-demo-role-title">{r.title}</span>
+                    <span className="lp-demo-role-desc">
+                      {demoLoading === r.role ? "Signing in…" : r.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-
-      <div className="login-divider" aria-hidden>
-        <span>or</span>
-      </div>
-
-      <button
-        type="button"
-        className="btn btn-ghost login-demo-toggle"
-        disabled={busy}
-        onClick={() => {
-          setShowDemo((v) => !v);
-          setError(null);
-        }}
-      >
-        {showDemo ? "Hide demo mode" : "Continue with demo mode (role cards)"}
-      </button>
-
-      {showDemo && (
-        <section className="login-demo-section" aria-label="Demo mode">
-          <p className="login-subtitle login-subtitle--demo">
-            Select your role to continue (no password required)
-          </p>
-          {error && <p className="form-error form-error--center">{error}</p>}
-          <div className="role-grid role-grid--login">
-            {roles.map((r) => (
-              <button
-                key={r.role}
-                type="button"
-                className={`role-card ${r.color}`}
-                disabled={busy}
-                onClick={() => handleDemoSelect(r.role)}
-              >
-                <span className="role-card-icon" aria-hidden />
-                <span className="role-card-title">{r.title}</span>
-                <span className="role-card-desc">{r.description}</span>
-                {demoLoading === r.role && (
-                  <span className="role-card-loading">Signing in…</span>
-                )}
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   );
 }

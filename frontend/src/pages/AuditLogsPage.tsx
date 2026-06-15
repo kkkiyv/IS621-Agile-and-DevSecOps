@@ -12,15 +12,34 @@ const ACTION_BADGE_CLASS: Record<string, string> = {
   SESSION_NOTE_CREATED: "audit-badge audit-badge--session",
 };
 
-function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString("en-US", {
+const ACTION_ICON: Record<string, string> = {
+  REFERRAL_CREATED: "📋",
+  REFERRAL_TRIAGED: "🔍",
+  CASE_CREATED: "📁",
+  NOTE_CREATED: "📝",
+  TASK_CREATED: "✅",
+  SESSION_NOTE_CREATED: "💬",
+};
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
+  });
+}
+
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     second: "2-digit",
   });
+}
+
+function formatRole(role: string): string {
+  if (role === "LEAD_ADMIN") return "Lead Admin";
+  return role.charAt(0) + role.slice(1).toLowerCase();
 }
 
 export function AuditLogsPage() {
@@ -81,18 +100,26 @@ export function AuditLogsPage() {
               </tr>
             </thead>
             <tbody>
-              {logs.map((entry) => (
+              {logs.map((entry, i) => (
                 <tr key={entry.id}>
-                  <td className="audit-timestamp">{formatTimestamp(entry.timestamp)}</td>
+                  <td className="audit-timestamp">
+                    <span>{formatDate(entry.timestamp)}</span>
+                    <span className="audit-timestamp-time">{formatTime(entry.timestamp)}</span>
+                  </td>
                   <td>
                     <span className={ACTION_BADGE_CLASS[entry.action] ?? "audit-badge"}>
-                      {entry.actionLabel}
+                      {ACTION_ICON[entry.action]} {entry.actionLabel}
                     </span>
                   </td>
-                  <td>{entry.user.label}</td>
+                  <td>
+                    <span className="audit-user-name">{entry.user.name}</span>
+                    <span className="audit-user-role">{formatRole(entry.user.role)}</span>
+                  </td>
                   <td>{entry.details}</td>
                   <td>
-                    <code className="audit-record-id">{entry.displayRecordId}</code>
+                    <code className="audit-record-id">
+                      {entry.recordType === "referral" ? "ref" : entry.recordType}-{String(i + 1).padStart(2, "0")}
+                    </code>
                   </td>
                 </tr>
               ))}
