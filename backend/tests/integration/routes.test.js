@@ -16,7 +16,7 @@ const prisma = new PrismaClient();
 
 let teacherToken, teacher2Token, counsellorToken, leadToken;
 let teacherUser, counsellorUser, leadUser;
-let testCaseId;
+let testCaseId, closedCaseId, existingCaseRefId, testTaskId;
 let triageRef1Id, triageRef2Id, triageRef3Id;
 
 beforeAll(async () => {
@@ -51,12 +51,59 @@ beforeAll(async () => {
   triageRef1Id = r1.id;
   triageRef2Id = r2.id;
   triageRef3Id = r3.id;
+
+  // Create a CLOSED case for INT-08 task-blocked and case-not-found tests
+  const closedRef = await prisma.referral.create({
+    data: {
+      studentName: "INT-TEST-Closed-Case-Ref",
+      concern: "Behavioural",
+      description: "Integration test referral for closed case scenario testing.",
+      submittedById: teacherUser.id,
+      status: "CASE_OPENED",
+    },
+  });
+  const closed = await prisma.case.create({
+    data: { referralId: closedRef.id, assignedToId: counsellorUser.id, status: "CLOSED" },
+  });
+  closedCaseId = closed.id;
+
+  // Create a referral that already has a case for the INT-09 duplicate case test
+  const dupRef = await prisma.referral.create({
+    data: {
+      studentName: "INT-TEST-Dup-Case-Ref",
+      concern: "Academic",
+      description: "Integration test referral for duplicate case scenario testing.",
+      submittedById: teacherUser.id,
+      status: "CASE_OPENED",
+    },
+  });
+  await prisma.case.create({
+    data: { referralId: dupRef.id, assignedToId: counsellorUser.id, status: "OPEN" },
+  });
+  existingCaseRefId = dupRef.id;
+
+  // Create a task for markTaskComplete test (INT-10)
+  const taskForCompletion = await prisma.task.create({
+    data: {
+      title: "INT-TEST-Task-For-Complete",
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      assignedToId: counsellorUser.id,
+      caseId: testCaseId,
+    },
+  });
+  testTaskId = taskForCompletion.id;
 });
 
 afterAll(async () => {
-  // Remove all data created by these tests (prefix INT-TEST-)
+  // Delete in FK-safe order: tasks → cases → referrals (all INT-TEST- prefixed)
   await prisma.task.deleteMany({ where: { title: { startsWith: "INT-TEST-" } } });
-  await prisma.referral.deleteMany({ where: { studentName: { startsWith: "INT-TEST-" } } });
+  const testRefs = await prisma.referral.findMany({
+    where: { studentName: { startsWith: "INT-TEST-" } },
+    select: { id: true },
+  });
+  const testRefIds = testRefs.map((r) => r.id);
+  await prisma.case.deleteMany({ where: { referralId: { in: testRefIds } } });
+  await prisma.referral.deleteMany({ where: { id: { in: testRefIds } } });
   await prisma.$disconnect();
 });
 
@@ -317,5 +364,215 @@ describe("INT-07: Dashboard & Audit Log Integration", () => {
     expect(res.body.referralsByRisk).toHaveProperty("HIGH");
     expect(res.body.referralsByRisk).toHaveProperty("MEDIUM");
     expect(res.body.referralsByRisk).toHaveProperty("LOW");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INT-08: Case & Task Error Handling
+// Route → Controller → real DB (error branches)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("INT-08: Case & Task Error Handling", () => {
+  test("triaging a non-existing referral returns 404", async () => {
+    const res = await request(app)
+      .patch("/api/referrals/nonexistent-ref-id/triage")
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ riskLevel: "LOW", triageNotes: "Notes", outcome: "OPEN_CASE" });
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  test("updating case status with an invalid value returns 400", async () => {
+    const res = await request(app)
+      .patch(`/api/cases/${testCaseId}/status`)
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ status: "INVALID_STATUS" });
+
+    expect(res.statusCode).toBe(400);
+  });
+
+  test("updating status of a non-existing case returns 404", async () => {
+    const res = await request(app)
+      .patch("/api/cases/nonexistent-case-id/status")
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ status: "IN_PROGRESS" });
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  test("creating a task on a closed case returns 400", async () => {
+    const futureDue = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const res = await request(app)
+      .post(`/api/cases/${closedCaseId}/tasks`)
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ title: "INT-TEST-Blocked task", dueDate: futureDue, assignedToId: counsellorUser.id });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toMatch(/closed/i);
+  });
+
+  test("creating a task on a non-existing case returns 404", async () => {
+    const futureDue = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const res = await request(app)
+      .post("/api/cases/nonexistent-case-id/tasks")
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ title: "INT-TEST-Ghost task", dueDate: futureDue, assignedToId: counsellorUser.id });
+
+    expect(res.statusCode).toBe(404);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INT-09: Open Case Error Handling
+// Route → Controller → real DB (conflict branches)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("INT-09: Open Case Error Handling", () => {
+  test("opening a case for a non-existing referral returns 404", async () => {
+    const res = await request(app)
+      .post("/api/cases")
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ referralId: "nonexistent-ref-id" });
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  test("opening a case when one already exists returns 409", async () => {
+    const res = await request(app)
+      .post("/api/cases")
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ referralId: existingCaseRefId });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.error).toMatch(/already exists/i);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INT-10: Case Retrieval & Updates
+// Covers: getCases, getCase, updateCaseOutcome, markTaskComplete, createNote
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("INT-10: Case Retrieval & Updates", () => {
+  test("GET /api/cases returns list of cases with overdue task counts", async () => {
+    const res = await request(app)
+      .get("/api/cases")
+      .set("Authorization", `Bearer ${counsellorToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body.cases)).toBe(true);
+    res.body.cases.forEach((c) => {
+      expect(c).toHaveProperty("id");
+      expect(c).toHaveProperty("status");
+      expect(c).toHaveProperty("overdueTaskCount");
+    });
+  });
+
+  test("GET /api/cases/:id returns a single case with tasks", async () => {
+    const res = await request(app)
+      .get(`/api/cases/${testCaseId}`)
+      .set("Authorization", `Bearer ${counsellorToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.case).toHaveProperty("id", testCaseId);
+    expect(Array.isArray(res.body.case.tasks)).toBe(true);
+  });
+
+  test("PATCH /api/cases/:id/outcome updates risk level on the case", async () => {
+    const res = await request(app)
+      .patch(`/api/cases/${testCaseId}/outcome`)
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ riskLevel: "HIGH", outcome: "ONGOING" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.case).toHaveProperty("riskLevel", "HIGH");
+    expect(res.body.case).toHaveProperty("outcome", "ONGOING");
+  });
+
+  test("PATCH /api/cases/:id/tasks/:taskId/complete marks task as done", async () => {
+    const res = await request(app)
+      .patch(`/api/cases/${testCaseId}/tasks/${testTaskId}/complete`)
+      .set("Authorization", `Bearer ${counsellorToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.task).toHaveProperty("completed", true);
+  });
+
+  test("POST /api/cases/:id/notes adds a private note to the case", async () => {
+    const res = await request(app)
+      .post(`/api/cases/${testCaseId}/notes`)
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ content: "INT-TEST note content for the case." });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.note).toHaveProperty("id");
+    expect(res.body.note).toHaveProperty("content", "INT-TEST note content for the case.");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INT-11: Session Notes
+// Covers: createSessionNote, getSessionNotes
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("INT-11: Session Notes", () => {
+  test("POST /api/cases/:id/sessions creates a session note", async () => {
+    const res = await request(app)
+      .post(`/api/cases/${testCaseId}/sessions`)
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({
+        sessionType: "INDIVIDUAL",
+        duration: 60,
+        sessionDate: new Date().toISOString(),
+        summary: "Student showed improvement in focus and engagement.",
+        observations: "Student was calm and responsive throughout the session.",
+        nextSteps: "Schedule follow-up in two weeks.",
+      });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body).toHaveProperty("sessionNote");
+    expect(res.body.sessionNote).toHaveProperty("sessionType", "INDIVIDUAL");
+    expect(res.body.sessionNote).toHaveProperty("duration", 60);
+  });
+
+  test("GET /api/cases/:id/sessions returns list of session notes", async () => {
+    const res = await request(app)
+      .get(`/api/cases/${testCaseId}/sessions`)
+      .set("Authorization", `Bearer ${counsellorToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body.sessionNotes)).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INT-12: Demo Login & Audit Logs
+// Covers: auth.routes issueSession + demo-login, audit.controller listAuditLogs
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("INT-12: Demo Login & Audit Logs", () => {
+  test("POST /api/auth/demo-login returns a token and user for TEACHER role", async () => {
+    const res = await request(app)
+      .post("/api/auth/demo-login")
+      .send({ role: "TEACHER" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty("accessToken");
+    expect(res.body.user).toHaveProperty("role", "TEACHER");
+  });
+
+  test("GET /api/audit-logs returns list of audit log entries for LEAD_ADMIN", async () => {
+    const res = await request(app)
+      .get("/api/audit-logs")
+      .set("Authorization", `Bearer ${leadToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body.logs)).toBe(true);
+    res.body.logs.forEach((log) => {
+      expect(log).toHaveProperty("action");
+      expect(log).toHaveProperty("user");
+    });
   });
 });
