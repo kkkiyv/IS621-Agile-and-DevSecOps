@@ -362,7 +362,7 @@ a {
 }
 
 .lp-submit {
-  width: 100%;
+  width: 70%;
   padding: 0.75rem;
   border: none;
   border-radius: 10px;
@@ -373,6 +373,9 @@ a {
   font-weight: 600;
   cursor: pointer;
   margin-top: 0.25rem;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
   transition: background 0.15s;
 }
 
