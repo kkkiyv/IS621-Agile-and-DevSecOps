@@ -26,4 +26,9 @@ describe("Task Overdue Logic", () => {
     ];
     expect(countOverdueTasks(tasks, NOW)).toBe(2);
   });
+
+  test("Test 14: incomplete task with a future due date is not overdue", () => {
+    const task = { completed: false, dueDate: FUTURE };
+    expect(isTaskOverdue(task, NOW)).toBe(false);
+  });
 });
