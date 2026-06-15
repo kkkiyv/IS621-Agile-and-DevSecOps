@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-test:
-    name: Build & Test
+  unit-test:
+    name: Unit Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -27,6 +27,50 @@ jobs:
 
       - name: Run unit tests
         run: npx jest --testPathPattern=tests/unit --verbose
+        working-directory: backend
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: casehub
+          POSTGRES_PASSWORD: casehub
+          POSTGRES_DB: casehub_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://casehub:casehub@localhost:5432/casehub_test
+      JWT_SECRET: ci-test-secret
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: backend
+
+      - name: Run migrations
+        run: npx prisma migrate deploy
+        working-directory: backend
+
+      - name: Seed database
+        run: npx prisma db seed
         working-directory: backend
 
       - name: Run integration tests
