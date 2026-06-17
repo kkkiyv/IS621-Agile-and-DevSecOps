@@ -9,7 +9,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "All" },
   { value: "SUBMITTED", label: "Submitted" },
   { value: "IN_REVIEW", label: "In Review" },
-  { value: "CASE_OPENED", label: "Converted to Case" },
+  { value: "CASE_OPENED", label: "Case Opened" },
   { value: "CLOSED", label: "Closed" },
 ];
 
