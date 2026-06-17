@@ -65,7 +65,7 @@ async function seedDatabase() {
 
   await prisma.user.upsert({
     where: { email: "ghimchong96+lead@gmail.com" },
-    update: { name: "Jordan Park" },
+    update: { name: "Jordan Park", role: Role.LEAD_ADMIN },
     create: {
       email: "ghimchong96+lead@gmail.com",
       name: "Jordan Park",
