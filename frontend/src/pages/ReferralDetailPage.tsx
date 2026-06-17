@@ -19,7 +19,15 @@ function riskBadgeClass(level?: string | null): string {
   return "badge badge--risk-medium";
 }
 
-function OwnerSelect({
+function PersonIcon() {
+  return (
+    <span className="owner-assignment-panel__icon" aria-hidden>
+      👤
+    </span>
+  );
+}
+
+function OwnerAssignmentPanel({
   counsellors,
   value,
   onChange,
@@ -29,24 +37,117 @@ function OwnerSelect({
   onChange: (id: string) => void;
 }) {
   return (
-    <label className="field">
-      <span>
-        Case Owner <span className="required">*</span>
-      </span>
-      <select value={value} onChange={(e) => onChange(e.target.value)} required>
-        <option value="" disabled>
-          {counsellors.length === 0 ? "No counsellors available" : "Select counsellor"}
-        </option>
-        {counsellors.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name} ({c.email})
+    <div className="owner-assignment-panel">
+      <div className="owner-assignment-panel__header">
+        <PersonIcon />
+        <span>Assign Case Owner</span>
+      </div>
+      <p className="owner-assignment-panel__hint">
+        A case owner must be assigned before the case can be created. They will be
+        accountable for managing this case.
+      </p>
+      <label className="field" style={{ marginBottom: 0 }}>
+        <span>
+          Case Owner <span className="required">*</span>
+        </span>
+        <select value={value} onChange={(e) => onChange(e.target.value)} required>
+          <option value="" disabled>
+            {counsellors.length === 0 ? "No counsellors available" : "Select a staff member"}
           </option>
-        ))}
-      </select>
-      <span className="field-hint">
-        Assign accountability before the case is created.
-      </span>
-    </label>
+          {counsellors.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name} — Counsellor
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
+function TriageFormFields({
+  riskLevel,
+  setRiskLevel,
+  outcome,
+  setOutcome,
+  triageNotes,
+  setTriageNotes,
+  showOwnerSelect,
+  counsellors,
+  assignedToId,
+  setAssignedToId,
+}: {
+  riskLevel: RiskLevel;
+  setRiskLevel: (v: RiskLevel) => void;
+  outcome: "OPEN_CASE" | "CLOSE" | "";
+  setOutcome: (v: "OPEN_CASE" | "CLOSE" | "") => void;
+  triageNotes: string;
+  setTriageNotes: (v: string) => void;
+  showOwnerSelect: boolean;
+  counsellors: CounsellorOption[];
+  assignedToId: string;
+  setAssignedToId: (v: string) => void;
+}) {
+  return (
+    <>
+      <label className="field">
+        <span>
+          Outcome <span className="required">*</span>
+        </span>
+        <select
+          value={outcome}
+          onChange={(e) => setOutcome(e.target.value as "OPEN_CASE" | "CLOSE" | "")}
+          required
+        >
+          <option value="" disabled>
+            Select outcome
+          </option>
+          <option value="OPEN_CASE">Create Case</option>
+          <option value="CLOSE">Close Referral</option>
+        </select>
+      </label>
+
+      <div className="field">
+        <span>
+          Risk Level <span className="required">*</span>
+        </span>
+        <div className="risk-toggle-group">
+          {(["LOW", "MEDIUM", "HIGH"] as RiskLevel[]).map((level) => (
+            <button
+              key={level}
+              type="button"
+              className={`risk-toggle-btn${riskLevel === level ? " risk-toggle-btn--active" : ""}`}
+              onClick={() => setRiskLevel(level)}
+            >
+              {level.charAt(0) + level.slice(1).toLowerCase()}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {showOwnerSelect && (
+        <OwnerAssignmentPanel
+          counsellors={counsellors}
+          value={assignedToId}
+          onChange={setAssignedToId}
+        />
+      )}
+
+      <label className="field">
+        <span>
+          Triage Notes <span className="required">*</span>
+        </span>
+        <textarea
+          rows={4}
+          maxLength={2000}
+          placeholder="Document your assessment, planned interventions, and rationale for the outcome..."
+          value={triageNotes}
+          onChange={(e) => setTriageNotes(e.target.value)}
+          required
+        />
+        <span className="field-hint">{triageNotes.length} characters</span>
+      </label>
+    </>
   );
 }
 
@@ -91,10 +192,10 @@ export function ReferralDetailPage() {
       .catch((e) => setCounsellorError(e instanceof Error ? e.message : "Failed to load counsellors"));
   }, [user]);
 
-  const canTriage = referral?.status === "SUBMITTED" && user?.role === "COUNSELLOR";
+  const canTriage =
+    referral?.status === "SUBMITTED" &&
+    (user?.role === "COUNSELLOR" || user?.role === "LEAD_ADMIN");
   const canOpenCase = referral?.status === "IN_REVIEW";
-  const leadViewingSubmitted =
-    referral?.status === "SUBMITTED" && user?.role === "LEAD_ADMIN";
 
   const handleOpenCase = async () => {
     if (!id || !assignedToId) return;
@@ -199,76 +300,25 @@ export function ReferralDetailPage() {
             </div>
           </div>
 
-          {leadViewingSubmitted ? (
-            <div className="card form-card">
-              <h3>Awaiting triage</h3>
-              <p className="muted" style={{ margin: 0 }}>
-                This referral must be triaged by a counsellor first. After triage, you can
-                open a case and assign an owner from an In Review referral.
-              </p>
-            </div>
-          ) : canTriage ? (
-            <form className="card form-card" onSubmit={handleTriage}>
+          {canTriage ? (
+            <form className="card form-card triage-form-card" onSubmit={handleTriage}>
               <h3>Triage Referral</h3>
               {counsellorError && <p className="form-error">{counsellorError}</p>}
               {error && <p className="form-error">{error}</p>}
               {success && <p className="form-success">{success}</p>}
 
-              <div className="field">
-                <span>
-                  Risk Level <span className="required">*</span>
-                </span>
-                <div className="risk-toggle-group">
-                  {(["LOW", "MEDIUM", "HIGH"] as RiskLevel[]).map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      className={`risk-toggle-btn${riskLevel === level ? " risk-toggle-btn--active" : ""}`}
-                      onClick={() => setRiskLevel(level)}
-                    >
-                      {level.charAt(0) + level.slice(1).toLowerCase()}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <label className="field">
-                <span>
-                  Outcome <span className="required">*</span>
-                </span>
-                <select
-                  value={outcome}
-                  onChange={(e) => setOutcome(e.target.value as "OPEN_CASE" | "CLOSE")}
-                  required
-                >
-                  <option value="" disabled>Select outcome</option>
-                  <option value="OPEN_CASE">Open Case</option>
-                  <option value="CLOSE">Close</option>
-                </select>
-              </label>
-
-              {outcome === "OPEN_CASE" && (
-                <OwnerSelect
-                  counsellors={counsellors}
-                  value={assignedToId}
-                  onChange={setAssignedToId}
-                />
-              )}
-
-              <label className="field">
-                <span>
-                  Triage Notes <span className="required">*</span>
-                </span>
-                <textarea
-                  rows={4}
-                  maxLength={2000}
-                  placeholder="Document your assessment, planned interventions, and rationale for the outcome..."
-                  value={triageNotes}
-                  onChange={(e) => setTriageNotes(e.target.value)}
-                  required
-                />
-                <span className="field-hint">{triageNotes.length} characters</span>
-              </label>
+              <TriageFormFields
+                riskLevel={riskLevel}
+                setRiskLevel={setRiskLevel}
+                outcome={outcome}
+                setOutcome={setOutcome}
+                triageNotes={triageNotes}
+                setTriageNotes={setTriageNotes}
+                showOwnerSelect={outcome === "OPEN_CASE"}
+                counsellors={counsellors}
+                assignedToId={assignedToId}
+                setAssignedToId={setAssignedToId}
+              />
 
               <div className="form-actions">
                 <button
@@ -288,7 +338,7 @@ export function ReferralDetailPage() {
               </div>
             </form>
           ) : (
-            <div className="card form-card">
+            <div className="card form-card triage-form-card">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h3 style={{ margin: 0 }}>Triage complete</h3>
                 {!canOpenCase && referral.caseId && (
@@ -300,7 +350,7 @@ export function ReferralDetailPage() {
               {canOpenCase && (
                 <>
                   {counsellorError && <p className="form-error">{counsellorError}</p>}
-                  <OwnerSelect
+                  <OwnerAssignmentPanel
                     counsellors={counsellors}
                     value={assignedToId}
                     onChange={setAssignedToId}

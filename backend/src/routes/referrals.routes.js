@@ -51,11 +51,11 @@ router.get(
   asyncHandler(getReferralById)
 );
 
-/** CH-004 — Counsellor triage */
+/** CH-004 — Counsellor / Lead triage */
 router.patch(
   "/:id/triage",
   authenticate,
-  requireRole("COUNSELLOR"),
+  requireRole("COUNSELLOR", "LEAD_ADMIN"),
   triageReferralValidator,
   validate,
   asyncHandler(triageReferral)
