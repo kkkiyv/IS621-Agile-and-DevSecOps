@@ -452,8 +452,19 @@ describe("INT-08: Case & Task Error Handling", () => {
 // INT-08b: Counsellor directory (DB + Clerk)
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe("INT-08b: Counsellor directory", () => {
-  test("GET /api/users/counsellors returns assignable counsellors", async () => {
+describe("INT-08b: Case owner directory", () => {
+  test("GET /api/users/case-owners returns counsellors and leads", async () => {
+    const res = await request(app)
+      .get("/api/users/case-owners")
+      .set("Authorization", `Bearer ${counsellorToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body.owners)).toBe(true);
+    expect(res.body.owners.some((c) => c.id === counsellorUser.id)).toBe(true);
+    expect(res.body.owners.some((c) => c.id === leadUser.id)).toBe(true);
+  });
+
+  test("GET /api/users/counsellors returns assignable case owners", async () => {
     const res = await request(app)
       .get("/api/users/counsellors")
       .set("Authorization", `Bearer ${counsellorToken}`);
@@ -461,18 +472,20 @@ describe("INT-08b: Counsellor directory", () => {
     expect(res.statusCode).toBe(200);
     expect(Array.isArray(res.body.counsellors)).toBe(true);
     expect(res.body.counsellors.some((c) => c.id === counsellorUser.id)).toBe(true);
+    expect(res.body.counsellors.some((c) => c.id === leadUser.id)).toBe(true);
   });
 
-  test("lead can list counsellors for case assignment", async () => {
+  test("lead can list case owners for assignment", async () => {
     const res = await request(app)
-      .get("/api/users/counsellors")
+      .get("/api/users/case-owners")
       .set("Authorization", `Bearer ${leadToken}`);
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.counsellors.length).toBeGreaterThan(0);
+    expect(res.body.owners.length).toBeGreaterThan(0);
+    expect(res.body.owners.some((c) => c.id === leadUser.id)).toBe(true);
   });
 
-  test("teacher cannot list counsellors", async () => {
+  test("teacher cannot list case owners", async () => {
     const res = await request(app)
       .get("/api/users/counsellors")
       .set("Authorization", `Bearer ${teacherToken}`);
@@ -500,7 +513,7 @@ describe("INT-09: Open Case Error Handling", () => {
     const res = await request(app)
       .post("/api/cases")
       .set("Authorization", `Bearer ${counsellorToken}`)
-      .send({ referralId: triageRef1Id, assignedToId: leadUser.id });
+      .send({ referralId: triageRef1Id, assignedToId: teacherUser.id });
 
     expect(res.statusCode).toBe(400);
   });
@@ -542,6 +555,26 @@ describe("INT-09: Open Case Error Handling", () => {
 
     expect(res.statusCode).toBe(201);
     expect(res.body.case.assignedTo.id).toBe(counsellorUser.id);
+  });
+
+  test("counsellor can open a case with lead as owner", async () => {
+    const openRef = await prisma.referral.create({
+      data: {
+        studentName: "INT-TEST-Lead-Case-Owner",
+        concern: "Academic",
+        description: "Integration test referral with lead case owner.",
+        submittedById: teacherUser.id,
+        status: "IN_REVIEW",
+      },
+    });
+
+    const res = await request(app)
+      .post("/api/cases")
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ referralId: openRef.id, assignedToId: leadUser.id });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.case.assignedTo.id).toBe(leadUser.id);
   });
 });
 

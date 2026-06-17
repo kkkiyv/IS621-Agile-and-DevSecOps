@@ -1,13 +1,16 @@
-const { listCounsellors } = require("../services/counsellor.service");
+const { listCaseOwners } = require("../services/counsellor.service");
 
-const getCounsellors = async (_req, res) => {
+const getCaseOwners = async (_req, res) => {
   try {
-    const counsellors = await listCounsellors();
-    return res.json({ counsellors });
+    const owners = await listCaseOwners();
+    return res.json({ owners, counsellors: owners });
   } catch (err) {
-    console.error("getCounsellors error:", err);
+    console.error("getCaseOwners error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
 
-module.exports = { getCounsellors };
+/** @deprecated use getCaseOwners */
+const getCounsellors = getCaseOwners;
+
+module.exports = { getCaseOwners, getCounsellors };

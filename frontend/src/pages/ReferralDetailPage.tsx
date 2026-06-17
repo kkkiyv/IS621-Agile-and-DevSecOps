@@ -3,8 +3,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { apiFetch } from "../api/client";
 import { useAuth } from "../context/AuthContext";
-import type { CounsellorOption, CounsellorReferral, RiskLevel } from "../types";
-import { formatRelativeTime } from "../utils/format";
+import type { CaseOwnerOption, CounsellorReferral, RiskLevel } from "../types";
+import { caseOwnerRoleLabel, formatRelativeTime } from "../utils/format";
 
 function statusBadgeClass(status: string): string {
   if (status === "IN_REVIEW") return "badge badge--review";
@@ -28,11 +28,11 @@ function PersonIcon() {
 }
 
 function OwnerAssignmentPanel({
-  counsellors,
+  caseOwners,
   value,
   onChange,
 }: {
-  counsellors: CounsellorOption[];
+  caseOwners: CaseOwnerOption[];
   value: string;
   onChange: (id: string) => void;
 }) {
@@ -52,11 +52,11 @@ function OwnerAssignmentPanel({
         </span>
         <select value={value} onChange={(e) => onChange(e.target.value)} required>
           <option value="" disabled>
-            {counsellors.length === 0 ? "No counsellors available" : "Select a staff member"}
+            {caseOwners.length === 0 ? "No staff available" : "Select a staff member"}
           </option>
-          {counsellors.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name} — Counsellor
+          {caseOwners.map((owner) => (
+            <option key={owner.id} value={owner.id}>
+              {owner.name} — {caseOwnerRoleLabel(owner.role)}
             </option>
           ))}
         </select>
@@ -73,7 +73,7 @@ function TriageFormFields({
   triageNotes,
   setTriageNotes,
   showOwnerSelect,
-  counsellors,
+  caseOwners,
   assignedToId,
   setAssignedToId,
 }: {
@@ -84,7 +84,7 @@ function TriageFormFields({
   triageNotes: string;
   setTriageNotes: (v: string) => void;
   showOwnerSelect: boolean;
-  counsellors: CounsellorOption[];
+  caseOwners: CaseOwnerOption[];
   assignedToId: string;
   setAssignedToId: (v: string) => void;
 }) {
@@ -127,7 +127,7 @@ function TriageFormFields({
 
       {showOwnerSelect && (
         <OwnerAssignmentPanel
-          counsellors={counsellors}
+          caseOwners={caseOwners}
           value={assignedToId}
           onChange={setAssignedToId}
         />
@@ -156,7 +156,7 @@ export function ReferralDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [referral, setReferral] = useState<CounsellorReferral | null>(null);
-  const [counsellors, setCounsellors] = useState<CounsellorOption[]>([]);
+  const [caseOwners, setCaseOwners] = useState<CaseOwnerOption[]>([]);
   const [assignedToId, setAssignedToId] = useState("");
   const [riskLevel, setRiskLevel] = useState<RiskLevel>("MEDIUM");
   const [triageNotes, setTriageNotes] = useState("");
@@ -164,7 +164,7 @@ export function ReferralDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [counsellorError, setCounsellorError] = useState<string | null>(null);
+  const [ownerError, setOwnerError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
@@ -182,14 +182,17 @@ export function ReferralDetailPage() {
 
   useEffect(() => {
     if (!user) return;
-    apiFetch<{ counsellors: CounsellorOption[] }>("/api/users/counsellors")
+    apiFetch<{ owners: CaseOwnerOption[] }>("/api/users/case-owners")
       .then((data) => {
-        setCounsellors(data.counsellors);
-        if (user.role === "COUNSELLOR" && data.counsellors.some((c) => c.id === user.id)) {
+        setCaseOwners(data.owners);
+        if (
+          (user.role === "COUNSELLOR" || user.role === "LEAD_ADMIN") &&
+          data.owners.some((owner) => owner.id === user.id)
+        ) {
           setAssignedToId(user.id);
         }
       })
-      .catch((e) => setCounsellorError(e instanceof Error ? e.message : "Failed to load counsellors"));
+      .catch((e) => setOwnerError(e instanceof Error ? e.message : "Failed to load staff"));
   }, [user]);
 
   const canTriage =
@@ -303,7 +306,7 @@ export function ReferralDetailPage() {
           {canTriage ? (
             <form className="card form-card triage-form-card" onSubmit={handleTriage}>
               <h3>Triage Referral</h3>
-              {counsellorError && <p className="form-error">{counsellorError}</p>}
+              {ownerError && <p className="form-error">{ownerError}</p>}
               {error && <p className="form-error">{error}</p>}
               {success && <p className="form-success">{success}</p>}
 
@@ -315,7 +318,7 @@ export function ReferralDetailPage() {
                 triageNotes={triageNotes}
                 setTriageNotes={setTriageNotes}
                 showOwnerSelect={outcome === "OPEN_CASE"}
-                counsellors={counsellors}
+                caseOwners={caseOwners}
                 assignedToId={assignedToId}
                 setAssignedToId={setAssignedToId}
               />
@@ -349,9 +352,9 @@ export function ReferralDetailPage() {
               </div>
               {canOpenCase && (
                 <>
-                  {counsellorError && <p className="form-error">{counsellorError}</p>}
+                  {ownerError && <p className="form-error">{ownerError}</p>}
                   <OwnerAssignmentPanel
-                    counsellors={counsellors}
+                    caseOwners={caseOwners}
                     value={assignedToId}
                     onChange={setAssignedToId}
                   />

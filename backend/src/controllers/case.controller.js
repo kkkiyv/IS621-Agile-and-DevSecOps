@@ -5,15 +5,15 @@ const {
   serializeTask,
 } = require("../utils/taskOverdue");
 const { recordAuditLog } = require("../services/audit.service");
-const { assertCounsellorOwner } = require("../services/counsellor.service");
+const { assertCaseOwner } = require("../services/counsellor.service");
 
 const openCase = async (req, res) => {
   try {
     const { referralId, assignedToId } = req.body;
 
-    const owner = await assertCounsellorOwner(assignedToId);
+    const owner = await assertCaseOwner(assignedToId);
     if (!owner) {
-      return res.status(400).json({ error: "assignedToId must be a valid counsellor" });
+      return res.status(400).json({ error: "assignedToId must be a valid counsellor or lead" });
     }
 
     const referral = await prisma.referral.findUnique({
