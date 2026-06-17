@@ -22,27 +22,32 @@ function nameFromClerkUser(user, email) {
 async function fetchClerkCounsellors() {
   if (!clerkConfigured()) return [];
 
-  const counsellors = [];
-  let offset = 0;
-  const limit = 100;
+  try {
+    const counsellors = [];
+    let offset = 0;
+    const limit = 100;
 
-  while (true) {
-    const response = await clerkClient.users.getUserList({ limit, offset });
-    for (const user of response.data) {
-      if (user.publicMetadata?.role !== Role.COUNSELLOR) continue;
-      const email = emailFromClerkUser(user);
-      if (!email) continue;
-      counsellors.push({
-        clerkId: user.id,
-        email: email.toLowerCase(),
-        name: nameFromClerkUser(user, email),
-      });
+    while (true) {
+      const response = await clerkClient.users.getUserList({ limit, offset });
+      for (const user of response.data) {
+        if (user.publicMetadata?.role !== Role.COUNSELLOR) continue;
+        const email = emailFromClerkUser(user);
+        if (!email) continue;
+        counsellors.push({
+          clerkId: user.id,
+          email: email.toLowerCase(),
+          name: nameFromClerkUser(user, email),
+        });
+      }
+      if (response.data.length < limit) break;
+      offset += limit;
     }
-    if (response.data.length < limit) break;
-    offset += limit;
-  }
 
-  return counsellors;
+    return counsellors;
+  } catch (err) {
+    console.error("[fetchClerkCounsellors] Clerk unavailable, using DB counsellors only:", err.message);
+    return [];
+  }
 }
 
 async function syncClerkCounsellorToDb({ clerkId, email, name }) {
@@ -90,9 +95,13 @@ async function listCounsellors() {
       continue;
     }
 
-    const synced = await syncClerkCounsellorToDb(clerkUser);
-    if (synced) {
-      byEmail.set(clerkUser.email, { ...synced, sources: ["clerk"] });
+    try {
+      const synced = await syncClerkCounsellorToDb(clerkUser);
+      if (synced) {
+        byEmail.set(clerkUser.email, { ...synced, sources: ["clerk"] });
+      }
+    } catch (err) {
+      console.error("[listCounsellors] Failed to sync Clerk counsellor:", clerkUser.email, err.message);
     }
   }
 
