@@ -163,16 +163,29 @@ const updateCaseStatus = async (req, res) => {
       return res.status(404).json({ error: "Case not found" });
     }
 
-    const updated = await prisma.case.update({
-      where: { id },
-      data: { status },
-      include: {
-        referral: {
-          select: { id: true, studentName: true, concern: true, riskLevel: true },
+    const ops = [
+      prisma.case.update({
+        where: { id },
+        data: { status },
+        include: {
+          referral: {
+            select: { id: true, studentName: true, concern: true, riskLevel: true },
+          },
+          assignedTo: { select: { id: true, name: true, email: true } },
         },
-        assignedTo: { select: { id: true, name: true, email: true } },
-      },
-    });
+      }),
+    ];
+
+    if (status === CaseStatus.CLOSED) {
+      ops.push(
+        prisma.referral.update({
+          where: { id: existing.referralId },
+          data: { status: ReferralStatus.CLOSED },
+        })
+      );
+    }
+
+    const [updated] = await prisma.$transaction(ops);
 
     return res.json({
       message: "Case status updated",
