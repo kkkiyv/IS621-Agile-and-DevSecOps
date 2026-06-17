@@ -63,6 +63,7 @@ export function ReferralDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [counsellorError, setCounsellorError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
@@ -87,11 +88,13 @@ export function ReferralDetailPage() {
           setAssignedToId(user.id);
         }
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load counsellors"));
+      .catch((e) => setCounsellorError(e instanceof Error ? e.message : "Failed to load counsellors"));
   }, [user]);
 
-  const canTriage = referral?.status === "SUBMITTED";
+  const canTriage = referral?.status === "SUBMITTED" && user?.role === "COUNSELLOR";
   const canOpenCase = referral?.status === "IN_REVIEW";
+  const leadViewingSubmitted =
+    referral?.status === "SUBMITTED" && user?.role === "LEAD_ADMIN";
 
   const handleOpenCase = async () => {
     if (!id || !assignedToId) return;
@@ -196,9 +199,18 @@ export function ReferralDetailPage() {
             </div>
           </div>
 
-          {canTriage ? (
+          {leadViewingSubmitted ? (
+            <div className="card form-card">
+              <h3>Awaiting triage</h3>
+              <p className="muted" style={{ margin: 0 }}>
+                This referral must be triaged by a counsellor first. After triage, you can
+                open a case and assign an owner from an In Review referral.
+              </p>
+            </div>
+          ) : canTriage ? (
             <form className="card form-card" onSubmit={handleTriage}>
               <h3>Triage Referral</h3>
+              {counsellorError && <p className="form-error">{counsellorError}</p>}
               {error && <p className="form-error">{error}</p>}
               {success && <p className="form-success">{success}</p>}
 
@@ -287,6 +299,7 @@ export function ReferralDetailPage() {
               </div>
               {canOpenCase && (
                 <>
+                  {counsellorError && <p className="form-error">{counsellorError}</p>}
                   <OwnerSelect
                     counsellors={counsellors}
                     value={assignedToId}
