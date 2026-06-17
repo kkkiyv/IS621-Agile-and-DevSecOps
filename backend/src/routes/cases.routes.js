@@ -23,6 +23,7 @@ router.post(
   authenticate,
   requireRole("COUNSELLOR", "LEAD_ADMIN"),
   body("referralId").isString().notEmpty().withMessage("referralId is required"),
+  body("assignedToId").isString().notEmpty().withMessage("assignedToId is required"),
   validate,
   asyncHandler(openCase)
 );

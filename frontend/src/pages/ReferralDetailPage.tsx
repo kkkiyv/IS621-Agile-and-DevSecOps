@@ -2,7 +2,8 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { apiFetch } from "../api/client";
-import type { CounsellorReferral, RiskLevel } from "../types";
+import { useAuth } from "../context/AuthContext";
+import type { CounsellorOption, CounsellorReferral, RiskLevel } from "../types";
 import { formatRelativeTime } from "../utils/format";
 
 function statusBadgeClass(status: string): string {
@@ -18,10 +19,44 @@ function riskBadgeClass(level?: string | null): string {
   return "badge badge--risk-medium";
 }
 
+function OwnerSelect({
+  counsellors,
+  value,
+  onChange,
+}: {
+  counsellors: CounsellorOption[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <label className="field">
+      <span>
+        Case Owner <span className="required">*</span>
+      </span>
+      <select value={value} onChange={(e) => onChange(e.target.value)} required>
+        <option value="" disabled>
+          Select counsellor
+        </option>
+        {counsellors.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name} ({c.email})
+          </option>
+        ))}
+      </select>
+      <span className="field-hint">
+        Assign accountability before the case is created.
+      </span>
+    </label>
+  );
+}
+
 export function ReferralDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [referral, setReferral] = useState<CounsellorReferral | null>(null);
+  const [counsellors, setCounsellors] = useState<CounsellorOption[]>([]);
+  const [assignedToId, setAssignedToId] = useState("");
   const [riskLevel, setRiskLevel] = useState<RiskLevel>("MEDIUM");
   const [triageNotes, setTriageNotes] = useState("");
   const [outcome, setOutcome] = useState<"OPEN_CASE" | "CLOSE" | "">("");
@@ -43,18 +78,29 @@ export function ReferralDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  useEffect(() => {
+    apiFetch<{ counsellors: CounsellorOption[] }>("/api/users/counsellors")
+      .then((data) => {
+        setCounsellors(data.counsellors);
+        if (user?.role === "COUNSELLOR" && data.counsellors.some((c) => c.id === user.id)) {
+          setAssignedToId(user.id);
+        }
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load counsellors"));
+  }, [user]);
+
   const canTriage = referral?.status === "SUBMITTED";
   const canOpenCase = referral?.status === "IN_REVIEW";
 
   const handleOpenCase = async () => {
-    if (!id) return;
+    if (!id || !assignedToId) return;
     setError(null);
     setSuccess(null);
     setSaving(true);
     try {
       await apiFetch("/api/cases", {
         method: "POST",
-        body: JSON.stringify({ referralId: id }),
+        body: JSON.stringify({ referralId: id, assignedToId }),
       });
       setSuccess("Case opened successfully.");
       setReferral((prev) =>
@@ -70,6 +116,7 @@ export function ReferralDetailPage() {
   const handleTriage = async (e: FormEvent) => {
     e.preventDefault();
     if (!id || !canTriage || !outcome) return;
+    if (outcome === "OPEN_CASE" && !assignedToId) return;
     setError(null);
     setSuccess(null);
     setSaving(true);
@@ -84,7 +131,7 @@ export function ReferralDetailPage() {
       if (outcome === "OPEN_CASE") {
         await apiFetch("/api/cases", {
           method: "POST",
-          body: JSON.stringify({ referralId: id }),
+          body: JSON.stringify({ referralId: id, assignedToId }),
         });
       }
       setReferral(data.referral);
@@ -187,6 +234,14 @@ export function ReferralDetailPage() {
                 </select>
               </label>
 
+              {outcome === "OPEN_CASE" && (
+                <OwnerSelect
+                  counsellors={counsellors}
+                  value={assignedToId}
+                  onChange={setAssignedToId}
+                />
+              )}
+
               <label className="field">
                 <span>
                   Triage Notes <span className="required">*</span>
@@ -203,7 +258,11 @@ export function ReferralDetailPage() {
               </label>
 
               <div className="form-actions">
-                <button type="submit" className="btn btn-primary" disabled={saving || !outcome}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={saving || !outcome || (outcome === "OPEN_CASE" && !assignedToId)}
+                >
                   {saving ? "Saving…" : "Complete Triage"}
                 </button>
                 <button
@@ -219,22 +278,31 @@ export function ReferralDetailPage() {
             <div className="card form-card">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h3 style={{ margin: 0 }}>Triage complete</h3>
-                {canOpenCase && (
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={saving}
-                    onClick={handleOpenCase}
-                  >
-                    {saving ? "Opening…" : "Open Case"}
-                  </button>
-                )}
                 {!canOpenCase && referral.caseId && (
                   <Link to={`/counsellor/cases/${referral.caseId}`} className="btn btn-primary btn-sm">
                     View Case
                   </Link>
                 )}
               </div>
+              {canOpenCase && (
+                <>
+                  <OwnerSelect
+                    counsellors={counsellors}
+                    value={assignedToId}
+                    onChange={setAssignedToId}
+                  />
+                  <div className="form-actions" style={{ marginTop: "1rem" }}>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={saving || !assignedToId}
+                      onClick={handleOpenCase}
+                    >
+                      {saving ? "Opening…" : "Open Case"}
+                    </button>
+                  </div>
+                </>
+              )}
               {error && <p className="form-error">{error}</p>}
               {success && <p className="form-success">{success}</p>}
               {!canOpenCase && (
