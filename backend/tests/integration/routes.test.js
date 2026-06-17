@@ -23,7 +23,7 @@ beforeAll(async () => {
   // Look up users created by the seed
   teacherUser    = await prisma.user.findUniqueOrThrow({ where: { email: "ghimchong96+teacher@gmail.com" } });
   const teacher2 = await prisma.user.findUniqueOrThrow({ where: { email: "ghimchong96+teacher2@gmail.com" } });
-  counsellorUser = await prisma.user.findUniqueOrThrow({ where: { email: "ghimchong96+counsellor@gmail.com" } });
+  counsellorUser = await prisma.user.findUniqueOrThrow({ where: { email: "kenny2mak+counsellor@gmail.com" } });
   leadUser       = await prisma.user.findUniqueOrThrow({ where: { email: "ghimchong96+lead@gmail.com" } });
 
   // Generate real JWT tokens — authenticate middleware accepts these without Clerk
