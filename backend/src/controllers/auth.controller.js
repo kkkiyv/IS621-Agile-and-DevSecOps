@@ -19,25 +19,34 @@ const syncUser = async (req, res) => {
       return res.status(400).json({ error: "No email on Clerk account" });
     }
 
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { email },
       select: { id: true, email: true, name: true, role: true, clerkId: true },
     });
 
     if (!user) {
-      return res.status(403).json({ error: "User not pre-approved in system" });
-    }
+      const role = clerkUser.publicMetadata?.role;
+      const validRoles = ["TEACHER", "COUNSELLOR", "LEAD_ADMIN"];
+      if (!role || !validRoles.includes(role)) {
+        return res.status(403).json({ error: "No valid role assigned in Clerk. Set publicMetadata.role first." });
+      }
 
-    if (user.clerkId && user.clerkId !== userId) {
-      return res.status(409).json({ error: "Email already linked to another account" });
-    }
-
-    // Atomic write: WHERE clerkId IS NULL prevents double-writes under concurrent requests
-    if (!user.clerkId) {
-      await prisma.user.updateMany({
-        where: { email, clerkId: null },
-        data: { clerkId: userId },
+      const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || email;
+      user = await prisma.user.create({
+        data: { email, name, role, clerkId: userId },
+        select: { id: true, email: true, name: true, role: true, clerkId: true },
       });
+    } else {
+      if (user.clerkId && user.clerkId !== userId) {
+        return res.status(409).json({ error: "Email already linked to another account" });
+      }
+
+      if (!user.clerkId) {
+        await prisma.user.updateMany({
+          where: { email, clerkId: null },
+          data: { clerkId: userId },
+        });
+      }
     }
 
     return res.status(200).json({
