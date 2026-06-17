@@ -10,7 +10,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "SUBMITTED", label: "Submitted" },
   { value: "IN_REVIEW", label: "In Review" },
   { value: "CASE_OPENED", label: "Case Opened" },
-  { value: "CLOSED", label: "Case Closed" },
+  { value: "CLOSED", label: "Closed" },
 ];
 
 function statusBadgeClass(status: string): string {
