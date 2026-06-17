@@ -284,6 +284,30 @@ describe("INT-05: Risk Assignment & Triage", () => {
 
     expect(res.statusCode).toBe(400);
   });
+
+  test("lead can triage a submitted referral", async () => {
+    const ref = await prisma.referral.create({
+      data: {
+        studentName: "INT-TEST-Lead-Triage",
+        concern: "Academic",
+        description: "Integration test referral for lead triage permissions.",
+        submittedById: teacherUser.id,
+        status: "SUBMITTED",
+      },
+    });
+
+    const res = await request(app)
+      .patch(`/api/referrals/${ref.id}/triage`)
+      .set("Authorization", `Bearer ${leadToken}`)
+      .send({
+        riskLevel: "LOW",
+        triageNotes: "Lead triage assessment notes.",
+        outcome: "CLOSE",
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.referral.status).toBe("CLOSED");
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
