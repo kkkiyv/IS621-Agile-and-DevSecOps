@@ -35,7 +35,7 @@ function OwnerSelect({
       </span>
       <select value={value} onChange={(e) => onChange(e.target.value)} required>
         <option value="" disabled>
-          Select counsellor
+          {counsellors.length === 0 ? "No counsellors available" : "Select counsellor"}
         </option>
         {counsellors.map((c) => (
           <option key={c.id} value={c.id}>
@@ -79,10 +79,11 @@ export function ReferralDetailPage() {
   }, [id]);
 
   useEffect(() => {
+    if (!user) return;
     apiFetch<{ counsellors: CounsellorOption[] }>("/api/users/counsellors")
       .then((data) => {
         setCounsellors(data.counsellors);
-        if (user?.role === "COUNSELLOR" && data.counsellors.some((c) => c.id === user.id)) {
+        if (user.role === "COUNSELLOR" && data.counsellors.some((c) => c.id === user.id)) {
           setAssignedToId(user.id);
         }
       })
