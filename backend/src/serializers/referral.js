@@ -1,8 +1,8 @@
 const STATUS_LABELS = {
   SUBMITTED: "Submitted",
   IN_REVIEW: "In Review",
-  CASE_OPENED: "Converted to Case",
-  CLOSED: "Closed",
+  CASE_OPENED: "Case Opened",
+  CLOSED: "Case Closed",
 };
 
 const RISK_LABELS = {
