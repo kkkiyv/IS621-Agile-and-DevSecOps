@@ -50,9 +50,16 @@ async function seedDatabase() {
     },
   });
 
-  // Retire legacy demo counsellor email so the dropdown matches Clerk only
+  // Retire legacy demo counsellor emails so the dropdown matches Clerk only
   await prisma.user.updateMany({
-    where: { email: "ghimchong96+counsellor@gmail.com" },
+    where: {
+      email: {
+        in: [
+          "ghimchong96+counsellor@gmail.com",
+          "ghimchong96+counsellor2@gmail.com",
+        ],
+      },
+    },
     data: { role: Role.TEACHER },
   });
 
