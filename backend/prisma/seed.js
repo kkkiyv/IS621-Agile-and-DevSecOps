@@ -31,13 +31,29 @@ async function seedDatabase() {
   });
 
   const counsellor = await prisma.user.upsert({
-    where: { email: "ghimchong96+counsellor@gmail.com" },
+    where: { email: "kenny2mak+counsellor@gmail.com" },
     update: { name: "Michael Chen" },
     create: {
-      email: "ghimchong96+counsellor@gmail.com",
+      email: "kenny2mak+counsellor@gmail.com",
       name: "Michael Chen",
       role: Role.COUNSELLOR,
     },
+  });
+
+  await prisma.user.upsert({
+    where: { email: "kenny2mak+counsellor2@gmail.com" },
+    update: { name: "Jackie Tan" },
+    create: {
+      email: "kenny2mak+counsellor2@gmail.com",
+      name: "Jackie Tan",
+      role: Role.COUNSELLOR,
+    },
+  });
+
+  // Retire legacy demo counsellor email so the dropdown matches Clerk only
+  await prisma.user.updateMany({
+    where: { email: "ghimchong96+counsellor@gmail.com" },
+    data: { role: Role.TEACHER },
   });
 
   await prisma.user.upsert({

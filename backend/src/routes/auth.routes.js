@@ -10,7 +10,7 @@ const router = express.Router();
 
 const DEMO_USERS = {
   TEACHER: "ghimchong96+teacher@gmail.com",
-  COUNSELLOR: "ghimchong96+counsellor@gmail.com",
+  COUNSELLOR: "kenny2mak+counsellor@gmail.com",
   LEAD_ADMIN: "ghimchong96+lead@gmail.com",
 };
 
