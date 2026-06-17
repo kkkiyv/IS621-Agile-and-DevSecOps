@@ -15,6 +15,13 @@ export interface User {
   role: Role;
 }
 
+export interface CounsellorOption {
+  id: string;
+  email: string;
+  name: string;
+  sources: ("db" | "clerk")[];
+}
+
 export interface AuthResponse {
   accessToken: string;
   expiresInHours: number;

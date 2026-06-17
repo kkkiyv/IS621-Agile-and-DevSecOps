@@ -425,16 +425,67 @@ describe("INT-08: Case & Task Error Handling", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// INT-08b: Counsellor directory (DB + Clerk)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("INT-08b: Counsellor directory", () => {
+  test("GET /api/users/counsellors returns assignable counsellors", async () => {
+    const res = await request(app)
+      .get("/api/users/counsellors")
+      .set("Authorization", `Bearer ${counsellorToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body.counsellors)).toBe(true);
+    expect(res.body.counsellors.some((c) => c.id === counsellorUser.id)).toBe(true);
+  });
+
+  test("lead can list counsellors for case assignment", async () => {
+    const res = await request(app)
+      .get("/api/users/counsellors")
+      .set("Authorization", `Bearer ${leadToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.counsellors.length).toBeGreaterThan(0);
+  });
+
+  test("teacher cannot list counsellors", async () => {
+    const res = await request(app)
+      .get("/api/users/counsellors")
+      .set("Authorization", `Bearer ${teacherToken}`);
+
+    expect(res.statusCode).toBe(403);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // INT-09: Open Case Error Handling
 // Route → Controller → real DB (conflict branches)
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("INT-09: Open Case Error Handling", () => {
+  test("opening a case without assignedToId returns 400", async () => {
+    const res = await request(app)
+      .post("/api/cases")
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ referralId: triageRef1Id });
+
+    expect(res.statusCode).toBe(400);
+  });
+
+  test("opening a case with invalid assignedToId returns 400", async () => {
+    const res = await request(app)
+      .post("/api/cases")
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ referralId: triageRef1Id, assignedToId: leadUser.id });
+
+    expect(res.statusCode).toBe(400);
+  });
+
   test("opening a case for a non-existing referral returns 404", async () => {
     const res = await request(app)
       .post("/api/cases")
       .set("Authorization", `Bearer ${counsellorToken}`)
-      .send({ referralId: "nonexistent-ref-id" });
+      .send({ referralId: "nonexistent-ref-id", assignedToId: counsellorUser.id });
 
     expect(res.statusCode).toBe(404);
   });
@@ -443,10 +494,30 @@ describe("INT-09: Open Case Error Handling", () => {
     const res = await request(app)
       .post("/api/cases")
       .set("Authorization", `Bearer ${counsellorToken}`)
-      .send({ referralId: existingCaseRefId });
+      .send({ referralId: existingCaseRefId, assignedToId: counsellorUser.id });
 
     expect(res.statusCode).toBe(409);
     expect(res.body.error).toMatch(/already exists/i);
+  });
+
+  test("lead can open a case with an assigned counsellor owner", async () => {
+    const openRef = await prisma.referral.create({
+      data: {
+        studentName: "INT-TEST-Open-Case-Owner",
+        concern: "Academic",
+        description: "Integration test referral for open case owner assignment.",
+        submittedById: teacherUser.id,
+        status: "IN_REVIEW",
+      },
+    });
+
+    const res = await request(app)
+      .post("/api/cases")
+      .set("Authorization", `Bearer ${leadToken}`)
+      .send({ referralId: openRef.id, assignedToId: counsellorUser.id });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.case.assignedTo.id).toBe(counsellorUser.id);
   });
 });
 
