@@ -28,6 +28,17 @@ const syncUser = async (req, res) => {
   }
 
   try {
+    // Fast path: user already linked — skip Clerk API call entirely
+    const existingUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true, email: true, name: true, role: true },
+    });
+
+    if (existingUser) {
+      return res.status(200).json(existingUser);
+    }
+
+    // Slow path: first-time sync — fetch from Clerk to get email + role
     const clerkUser = await clerkClient.users.getUser(userId);
     const email =
       clerkUser.primaryEmailAddress?.emailAddress ??
