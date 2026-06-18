@@ -56,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Clerk-synced user state
   const [clerkUser, setClerkUser] = useState<User | null>(null);
+  const [syncLoading, setSyncLoading] = useState(false);
 
   // Register Clerk token getter so apiFetch uses it automatically
   useEffect(() => {
@@ -64,14 +65,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Sync Clerk user to backend whenever Clerk signs in
   useEffect(() => {
+    if (!isLoaded) return;
     if (!isSignedIn) {
       setClerkUser(null);
       return;
     }
+    // Clear any stale demo session so Clerk user takes over
+    sessionStorage.removeItem(STORAGE_TOKEN);
+    sessionStorage.removeItem(STORAGE_USER);
+    setDemoToken(null);
+    setDemoUser(null);
+
+    setSyncLoading(true);
     apiFetch<User>("/api/auth/sync", { method: "POST" })
       .then(setClerkUser)
-      .catch(console.error);
-  }, [isSignedIn]);
+      .catch(console.error)
+      .finally(() => setSyncLoading(false));
+  }, [isLoaded, isSignedIn]);
 
   const applyDemoSession = useCallback((data: AuthResponse) => {
     const nextUser = persistSession(data);
@@ -116,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasDemoSession = Boolean(demoToken && demoUser);
   const user = hasDemoSession ? demoUser : (clerkUser ?? demoUser);
   const isAuthenticated = Boolean(clerkUser || hasDemoSession);
-  const loading = !isLoaded;
+  const loading = !isLoaded || syncLoading;
 
   const value = useMemo(
     () => ({

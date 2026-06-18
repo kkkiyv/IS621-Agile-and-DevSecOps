@@ -5,10 +5,16 @@ const {
   serializeTask,
 } = require("../utils/taskOverdue");
 const { recordAuditLog } = require("../services/audit.service");
+const { assertCaseOwner } = require("../services/counsellor.service");
 
 const openCase = async (req, res) => {
   try {
-    const { referralId } = req.body;
+    const { referralId, assignedToId } = req.body;
+
+    const owner = await assertCaseOwner(assignedToId);
+    if (!owner) {
+      return res.status(400).json({ error: "assignedToId must be a valid counsellor or lead" });
+    }
 
     const referral = await prisma.referral.findUnique({
       where: { id: referralId },
@@ -33,7 +39,7 @@ const openCase = async (req, res) => {
       prisma.case.create({
         data: {
           referralId,
-          assignedToId: req.user.id,
+          assignedToId: owner.id,
           status: CaseStatus.OPEN,
         },
         include: {

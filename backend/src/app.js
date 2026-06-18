@@ -7,6 +7,7 @@ const referralsRoutes = require("./routes/referrals.routes");
 const casesRoutes = require("./routes/cases.routes");
 const auditRoutes = require("./routes/audit.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
+const usersRoutes = require("./routes/users.routes");
 
 const app = express();
 
@@ -98,6 +99,7 @@ app.use("/api/referrals", referralsRoutes);
 app.use("/api/cases", casesRoutes);
 app.use("/api/audit-logs", auditRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/users", usersRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });

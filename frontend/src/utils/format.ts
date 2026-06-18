@@ -8,10 +8,15 @@ export function formatRelativeTime(iso: string): string {
 }
 
 export const CONCERN_CATEGORIES = [
-  "Behavioral concerns",
   "Academic performance",
-  "Attendance",
-  "Wellbeing",
-  "Safeguarding",
+  "Behavioral concerns",
+  "Attendance issues",
+  "Social/emotional wellbeing",
+  "Family/home situation",
+  "Health concerns",
   "Other",
 ] as const;
+
+export function caseOwnerRoleLabel(role: "COUNSELLOR" | "LEAD_ADMIN"): string {
+  return role === "LEAD_ADMIN" ? "Lead" : "Counsellor";
+}

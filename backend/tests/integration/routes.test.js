@@ -23,7 +23,7 @@ beforeAll(async () => {
   // Look up users created by the seed
   teacherUser    = await prisma.user.findUniqueOrThrow({ where: { email: "ghimchong96+teacher@gmail.com" } });
   const teacher2 = await prisma.user.findUniqueOrThrow({ where: { email: "ghimchong96+teacher2@gmail.com" } });
-  counsellorUser = await prisma.user.findUniqueOrThrow({ where: { email: "ghimchong96+counsellor@gmail.com" } });
+  counsellorUser = await prisma.user.findUniqueOrThrow({ where: { email: "kenny2mak+counsellor@gmail.com" } });
   leadUser       = await prisma.user.findUniqueOrThrow({ where: { email: "ghimchong96+lead@gmail.com" } });
 
   // Generate real JWT tokens — authenticate middleware accepts these without Clerk
@@ -284,6 +284,30 @@ describe("INT-05: Risk Assignment & Triage", () => {
 
     expect(res.statusCode).toBe(400);
   });
+
+  test("lead can triage a submitted referral", async () => {
+    const ref = await prisma.referral.create({
+      data: {
+        studentName: "INT-TEST-Lead-Triage",
+        concern: "Academic",
+        description: "Integration test referral for lead triage permissions.",
+        submittedById: teacherUser.id,
+        status: "SUBMITTED",
+      },
+    });
+
+    const res = await request(app)
+      .patch(`/api/referrals/${ref.id}/triage`)
+      .set("Authorization", `Bearer ${leadToken}`)
+      .send({
+        riskLevel: "LOW",
+        triageNotes: "Lead triage assessment notes.",
+        outcome: "CLOSE",
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.referral.status).toBe("CLOSED");
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -425,16 +449,80 @@ describe("INT-08: Case & Task Error Handling", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// INT-08b: Counsellor directory (DB + Clerk)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("INT-08b: Case owner directory", () => {
+  test("GET /api/users/case-owners returns counsellors and leads", async () => {
+    const res = await request(app)
+      .get("/api/users/case-owners")
+      .set("Authorization", `Bearer ${counsellorToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body.owners)).toBe(true);
+    expect(res.body.owners.some((c) => c.id === counsellorUser.id)).toBe(true);
+    expect(res.body.owners.some((c) => c.id === leadUser.id)).toBe(true);
+  });
+
+  test("GET /api/users/counsellors returns assignable case owners", async () => {
+    const res = await request(app)
+      .get("/api/users/counsellors")
+      .set("Authorization", `Bearer ${counsellorToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body.counsellors)).toBe(true);
+    expect(res.body.counsellors.some((c) => c.id === counsellorUser.id)).toBe(true);
+    expect(res.body.counsellors.some((c) => c.id === leadUser.id)).toBe(true);
+  });
+
+  test("lead can list case owners for assignment", async () => {
+    const res = await request(app)
+      .get("/api/users/case-owners")
+      .set("Authorization", `Bearer ${leadToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.owners.length).toBeGreaterThan(0);
+    expect(res.body.owners.some((c) => c.id === leadUser.id)).toBe(true);
+  });
+
+  test("teacher cannot list case owners", async () => {
+    const res = await request(app)
+      .get("/api/users/counsellors")
+      .set("Authorization", `Bearer ${teacherToken}`);
+
+    expect(res.statusCode).toBe(403);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // INT-09: Open Case Error Handling
 // Route → Controller → real DB (conflict branches)
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("INT-09: Open Case Error Handling", () => {
+  test("opening a case without assignedToId returns 400", async () => {
+    const res = await request(app)
+      .post("/api/cases")
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ referralId: triageRef1Id });
+
+    expect(res.statusCode).toBe(400);
+  });
+
+  test("opening a case with invalid assignedToId returns 400", async () => {
+    const res = await request(app)
+      .post("/api/cases")
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ referralId: triageRef1Id, assignedToId: teacherUser.id });
+
+    expect(res.statusCode).toBe(400);
+  });
+
   test("opening a case for a non-existing referral returns 404", async () => {
     const res = await request(app)
       .post("/api/cases")
       .set("Authorization", `Bearer ${counsellorToken}`)
-      .send({ referralId: "nonexistent-ref-id" });
+      .send({ referralId: "nonexistent-ref-id", assignedToId: counsellorUser.id });
 
     expect(res.statusCode).toBe(404);
   });
@@ -443,10 +531,50 @@ describe("INT-09: Open Case Error Handling", () => {
     const res = await request(app)
       .post("/api/cases")
       .set("Authorization", `Bearer ${counsellorToken}`)
-      .send({ referralId: existingCaseRefId });
+      .send({ referralId: existingCaseRefId, assignedToId: counsellorUser.id });
 
     expect(res.statusCode).toBe(409);
     expect(res.body.error).toMatch(/already exists/i);
+  });
+
+  test("lead can open a case with an assigned counsellor owner", async () => {
+    const openRef = await prisma.referral.create({
+      data: {
+        studentName: "INT-TEST-Open-Case-Owner",
+        concern: "Academic",
+        description: "Integration test referral for open case owner assignment.",
+        submittedById: teacherUser.id,
+        status: "IN_REVIEW",
+      },
+    });
+
+    const res = await request(app)
+      .post("/api/cases")
+      .set("Authorization", `Bearer ${leadToken}`)
+      .send({ referralId: openRef.id, assignedToId: counsellorUser.id });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.case.assignedTo.id).toBe(counsellorUser.id);
+  });
+
+  test("counsellor can open a case with lead as owner", async () => {
+    const openRef = await prisma.referral.create({
+      data: {
+        studentName: "INT-TEST-Lead-Case-Owner",
+        concern: "Academic",
+        description: "Integration test referral with lead case owner.",
+        submittedById: teacherUser.id,
+        status: "IN_REVIEW",
+      },
+    });
+
+    const res = await request(app)
+      .post("/api/cases")
+      .set("Authorization", `Bearer ${counsellorToken}`)
+      .send({ referralId: openRef.id, assignedToId: leadUser.id });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.case.assignedTo.id).toBe(leadUser.id);
   });
 });
 

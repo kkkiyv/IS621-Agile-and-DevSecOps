@@ -1877,3 +1877,46 @@ a {
 .audit-properties li {
   margin-bottom: 0.25rem;
 }
+
+/* ── Triage / assign owner (referral detail) ───────────────── */
+.owner-assignment-panel {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.25rem;
+}
+
+.owner-assignment-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1e3a8a;
+}
+
+.owner-assignment-panel__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #2563eb;
+  font-size: 0.85rem;
+}
+
+.owner-assignment-panel__hint {
+  margin: 0 0 1rem;
+  font-size: 0.8125rem;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.triage-form-card h3 {
+  margin: 0 0 1.25rem;
+  font-size: 1.125rem;
+}

@@ -15,6 +15,17 @@ export interface User {
   role: Role;
 }
 
+export interface CaseOwnerOption {
+  id: string;
+  email: string;
+  name: string;
+  role: "COUNSELLOR" | "LEAD_ADMIN";
+  sources: ("db" | "clerk")[];
+}
+
+/** @deprecated use CaseOwnerOption */
+export type CounsellorOption = CaseOwnerOption;
+
 export interface AuthResponse {
   accessToken: string;
   expiresInHours: number;

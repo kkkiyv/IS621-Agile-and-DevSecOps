@@ -2,8 +2,9 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { apiFetch } from "../api/client";
-import type { CounsellorReferral, RiskLevel } from "../types";
-import { formatRelativeTime } from "../utils/format";
+import { useAuth } from "../context/AuthContext";
+import type { CaseOwnerOption, CounsellorReferral, RiskLevel } from "../types";
+import { caseOwnerRoleLabel, formatRelativeTime } from "../utils/format";
 
 function statusBadgeClass(status: string): string {
   if (status === "IN_REVIEW") return "badge badge--review";
@@ -18,16 +19,152 @@ function riskBadgeClass(level?: string | null): string {
   return "badge badge--risk-medium";
 }
 
+function PersonIcon() {
+  return (
+    <span className="owner-assignment-panel__icon" aria-hidden>
+      👤
+    </span>
+  );
+}
+
+function OwnerAssignmentPanel({
+  caseOwners,
+  value,
+  onChange,
+}: {
+  caseOwners: CaseOwnerOption[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div className="owner-assignment-panel">
+      <div className="owner-assignment-panel__header">
+        <PersonIcon />
+        <span>Assign Case Owner</span>
+      </div>
+      <p className="owner-assignment-panel__hint">
+        A case owner must be assigned before the case can be created. They will be
+        accountable for managing this case.
+      </p>
+      <label className="field" style={{ marginBottom: 0 }}>
+        <span>
+          Case Owner <span className="required">*</span>
+        </span>
+        <select value={value} onChange={(e) => onChange(e.target.value)} required>
+          <option value="" disabled>
+            {caseOwners.length === 0 ? "No staff available" : "Select a staff member"}
+          </option>
+          {caseOwners.map((owner) => (
+            <option key={owner.id} value={owner.id}>
+              {owner.name} — {caseOwnerRoleLabel(owner.role)}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
+function TriageFormFields({
+  riskLevel,
+  setRiskLevel,
+  outcome,
+  setOutcome,
+  triageNotes,
+  setTriageNotes,
+  showOwnerSelect,
+  caseOwners,
+  assignedToId,
+  setAssignedToId,
+}: {
+  riskLevel: RiskLevel;
+  setRiskLevel: (v: RiskLevel) => void;
+  outcome: "OPEN_CASE" | "CLOSE" | "";
+  setOutcome: (v: "OPEN_CASE" | "CLOSE" | "") => void;
+  triageNotes: string;
+  setTriageNotes: (v: string) => void;
+  showOwnerSelect: boolean;
+  caseOwners: CaseOwnerOption[];
+  assignedToId: string;
+  setAssignedToId: (v: string) => void;
+}) {
+  return (
+    <>
+      <label className="field">
+        <span>
+          Outcome <span className="required">*</span>
+        </span>
+        <select
+          value={outcome}
+          onChange={(e) => setOutcome(e.target.value as "OPEN_CASE" | "CLOSE" | "")}
+          required
+        >
+          <option value="" disabled>
+            Select outcome
+          </option>
+          <option value="OPEN_CASE">Create Case</option>
+          <option value="CLOSE">Close Referral</option>
+        </select>
+      </label>
+
+      <div className="field">
+        <span>
+          Risk Level <span className="required">*</span>
+        </span>
+        <div className="risk-toggle-group">
+          {(["LOW", "MEDIUM", "HIGH"] as RiskLevel[]).map((level) => (
+            <button
+              key={level}
+              type="button"
+              className={`risk-toggle-btn${riskLevel === level ? " risk-toggle-btn--active" : ""}`}
+              onClick={() => setRiskLevel(level)}
+            >
+              {level.charAt(0) + level.slice(1).toLowerCase()}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {showOwnerSelect && (
+        <OwnerAssignmentPanel
+          caseOwners={caseOwners}
+          value={assignedToId}
+          onChange={setAssignedToId}
+        />
+      )}
+
+      <label className="field">
+        <span>
+          Triage Notes <span className="required">*</span>
+        </span>
+        <textarea
+          rows={4}
+          maxLength={2000}
+          placeholder="Document your assessment, planned interventions, and rationale for the outcome..."
+          value={triageNotes}
+          onChange={(e) => setTriageNotes(e.target.value)}
+          required
+        />
+        <span className="field-hint">{triageNotes.length} characters</span>
+      </label>
+    </>
+  );
+}
+
 export function ReferralDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [referral, setReferral] = useState<CounsellorReferral | null>(null);
+  const [caseOwners, setCaseOwners] = useState<CaseOwnerOption[]>([]);
+  const [assignedToId, setAssignedToId] = useState("");
   const [riskLevel, setRiskLevel] = useState<RiskLevel>("MEDIUM");
   const [triageNotes, setTriageNotes] = useState("");
   const [outcome, setOutcome] = useState<"OPEN_CASE" | "CLOSE" | "">("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ownerError, setOwnerError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,18 +180,35 @@ export function ReferralDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const canTriage = referral?.status === "SUBMITTED";
+  useEffect(() => {
+    if (!user) return;
+    apiFetch<{ owners: CaseOwnerOption[] }>("/api/users/case-owners")
+      .then((data) => {
+        setCaseOwners(data.owners);
+        if (
+          (user.role === "COUNSELLOR" || user.role === "LEAD_ADMIN") &&
+          data.owners.some((owner) => owner.id === user.id)
+        ) {
+          setAssignedToId(user.id);
+        }
+      })
+      .catch((e) => setOwnerError(e instanceof Error ? e.message : "Failed to load staff"));
+  }, [user]);
+
+  const canTriage =
+    referral?.status === "SUBMITTED" &&
+    (user?.role === "COUNSELLOR" || user?.role === "LEAD_ADMIN");
   const canOpenCase = referral?.status === "IN_REVIEW";
 
   const handleOpenCase = async () => {
-    if (!id) return;
+    if (!id || !assignedToId) return;
     setError(null);
     setSuccess(null);
     setSaving(true);
     try {
       await apiFetch("/api/cases", {
         method: "POST",
-        body: JSON.stringify({ referralId: id }),
+        body: JSON.stringify({ referralId: id, assignedToId }),
       });
       setSuccess("Case opened successfully.");
       setReferral((prev) =>
@@ -70,6 +224,7 @@ export function ReferralDetailPage() {
   const handleTriage = async (e: FormEvent) => {
     e.preventDefault();
     if (!id || !canTriage || !outcome) return;
+    if (outcome === "OPEN_CASE" && !assignedToId) return;
     setError(null);
     setSuccess(null);
     setSaving(true);
@@ -84,7 +239,7 @@ export function ReferralDetailPage() {
       if (outcome === "OPEN_CASE") {
         await apiFetch("/api/cases", {
           method: "POST",
-          body: JSON.stringify({ referralId: id }),
+          body: JSON.stringify({ referralId: id, assignedToId }),
         });
       }
       setReferral(data.referral);
@@ -149,61 +304,31 @@ export function ReferralDetailPage() {
           </div>
 
           {canTriage ? (
-            <form className="card form-card" onSubmit={handleTriage}>
+            <form className="card form-card triage-form-card" onSubmit={handleTriage}>
               <h3>Triage Referral</h3>
+              {ownerError && <p className="form-error">{ownerError}</p>}
               {error && <p className="form-error">{error}</p>}
               {success && <p className="form-success">{success}</p>}
 
-              <div className="field">
-                <span>
-                  Risk Level <span className="required">*</span>
-                </span>
-                <div className="risk-toggle-group">
-                  {(["LOW", "MEDIUM", "HIGH"] as RiskLevel[]).map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      className={`risk-toggle-btn${riskLevel === level ? " risk-toggle-btn--active" : ""}`}
-                      onClick={() => setRiskLevel(level)}
-                    >
-                      {level.charAt(0) + level.slice(1).toLowerCase()}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <label className="field">
-                <span>
-                  Outcome <span className="required">*</span>
-                </span>
-                <select
-                  value={outcome}
-                  onChange={(e) => setOutcome(e.target.value as "OPEN_CASE" | "CLOSE")}
-                  required
-                >
-                  <option value="" disabled>Select outcome</option>
-                  <option value="OPEN_CASE">Open Case</option>
-                  <option value="CLOSE">Close</option>
-                </select>
-              </label>
-
-              <label className="field">
-                <span>
-                  Triage Notes <span className="required">*</span>
-                </span>
-                <textarea
-                  rows={4}
-                  maxLength={2000}
-                  placeholder="Document your assessment, planned interventions, and rationale for the outcome..."
-                  value={triageNotes}
-                  onChange={(e) => setTriageNotes(e.target.value)}
-                  required
-                />
-                <span className="field-hint">{triageNotes.length} characters</span>
-              </label>
+              <TriageFormFields
+                riskLevel={riskLevel}
+                setRiskLevel={setRiskLevel}
+                outcome={outcome}
+                setOutcome={setOutcome}
+                triageNotes={triageNotes}
+                setTriageNotes={setTriageNotes}
+                showOwnerSelect={outcome === "OPEN_CASE"}
+                caseOwners={caseOwners}
+                assignedToId={assignedToId}
+                setAssignedToId={setAssignedToId}
+              />
 
               <div className="form-actions">
-                <button type="submit" className="btn btn-primary" disabled={saving || !outcome}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={saving || !outcome || (outcome === "OPEN_CASE" && !assignedToId)}
+                >
                   {saving ? "Saving…" : "Complete Triage"}
                 </button>
                 <button
@@ -216,25 +341,35 @@ export function ReferralDetailPage() {
               </div>
             </form>
           ) : (
-            <div className="card form-card">
+            <div className="card form-card triage-form-card">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h3 style={{ margin: 0 }}>Triage complete</h3>
-                {canOpenCase && (
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={saving}
-                    onClick={handleOpenCase}
-                  >
-                    {saving ? "Opening…" : "Open Case"}
-                  </button>
-                )}
                 {!canOpenCase && referral.caseId && (
                   <Link to={`/counsellor/cases/${referral.caseId}`} className="btn btn-primary btn-sm">
                     View Case
                   </Link>
                 )}
               </div>
+              {canOpenCase && (
+                <>
+                  {ownerError && <p className="form-error">{ownerError}</p>}
+                  <OwnerAssignmentPanel
+                    caseOwners={caseOwners}
+                    value={assignedToId}
+                    onChange={setAssignedToId}
+                  />
+                  <div className="form-actions" style={{ marginTop: "1rem" }}>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={saving || !assignedToId}
+                      onClick={handleOpenCase}
+                    >
+                      {saving ? "Opening…" : "Open Case"}
+                    </button>
+                  </div>
+                </>
+              )}
               {error && <p className="form-error">{error}</p>}
               {success && <p className="form-success">{success}</p>}
               {!canOpenCase && (
