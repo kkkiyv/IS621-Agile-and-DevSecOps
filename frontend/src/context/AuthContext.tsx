@@ -28,8 +28,20 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+const STORAGE_CLERK_USER = "clerk_user";
+
 function loadUser(): User | null {
   const raw = sessionStorage.getItem(STORAGE_USER);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
+  }
+}
+
+function loadClerkUser(): User | null {
+  const raw = sessionStorage.getItem(STORAGE_CLERK_USER);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as User;
@@ -54,8 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const [demoUser, setDemoUser] = useState<User | null>(() => loadUser());
 
-  // Clerk-synced user state
-  const [clerkUser, setClerkUser] = useState<User | null>(null);
+  // Clerk-synced user state — seed from cache so page loads don't block
+  const [clerkUser, setClerkUser] = useState<User | null>(() => loadClerkUser());
   const [syncLoading, setSyncLoading] = useState(false);
 
   // Register Clerk token getter so apiFetch uses it automatically
@@ -67,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn) {
+      sessionStorage.removeItem(STORAGE_CLERK_USER);
       setClerkUser(null);
       return;
     }
@@ -76,9 +89,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setDemoToken(null);
     setDemoUser(null);
 
-    setSyncLoading(true);
+    // Only show loading spinner if there's no cached user to show yet
+    if (!loadClerkUser()) setSyncLoading(true);
     apiFetch<User>("/api/auth/sync", { method: "POST" })
-      .then(setClerkUser)
+      .then((u) => {
+        sessionStorage.setItem(STORAGE_CLERK_USER, JSON.stringify(u));
+        setClerkUser(u);
+      })
       .catch(console.error)
       .finally(() => setSyncLoading(false));
   }, [isLoaded, isSignedIn]);
@@ -108,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     sessionStorage.removeItem(STORAGE_TOKEN);
     sessionStorage.removeItem(STORAGE_USER);
+    sessionStorage.removeItem(STORAGE_CLERK_USER);
     setDemoToken(null);
     setDemoUser(null);
     setClerkUser(null);
